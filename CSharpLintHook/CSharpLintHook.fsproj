@@ -1,0 +1,28 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <OutputType>Exe</OutputType>
+        <TargetFramework>net10.0</TargetFramework>
+        <Nullable>enable</Nullable>
+        <DisableImplicitFSharpCoreReference>true</DisableImplicitFSharpCoreReference>
+        <WarningsAsErrors>FS0025,Nullable,FS3260,FS3261,FS3262,FS3263,FS3264,FS3265,FS3268,FS3271,FS00430</WarningsAsErrors>
+        <NoWarn>MT7091;NETSDK1206;NU1510</NoWarn>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <Compile Include="Common.fs"/>
+        <Compile Include="Effects.fs"/>
+        <Compile Include="Payload.fs"/>
+        <Compile Include="Logic.fs"/>
+        <Compile Include="Git.fs"/>
+        <Compile Include="Formatting.fs"/>
+        <Compile Include="Interpreter.fs"/>
+        <Compile Include="Program.fs"/>
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="FSharp.Core" Version="10.1.301"/>
+        <PackageReference Include="Microsoft.CodeAnalysis.CSharp.Workspaces" Version="5.3.0"/>
+    </ItemGroup>
+
+</Project>

@@ -1,0 +1,27 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "type": "prompt",
+        "prompt": "Ensure the Roslyn language server is running for this workspace by using the roslyn-start skill. Detect the .sln/.csproj (ask me to choose if there are several), install Microsoft.CodeAnalysis.LanguageServer via dotnet if it is missing, then start it. If it is already running, stay silent and do nothing."
+      }
+    ],
+    "postToolUse": [
+      {
+        "type": "command",
+        "cwd": ".",
+        "bash": "test -f CSharpLintHook.dll && dotnet CSharpLintHook.dll hook || true",
+        "powershell": "if (Test-Path CSharpLintHook.dll) { dotnet CSharpLintHook.dll hook }; exit 0",
+        "timeoutSec": 60
+      },
+      {
+        "type": "command",
+        "cwd": ".",
+        "bash": "test -x ./RoslynLspHook && ./RoslynLspHook postToolUse || true",
+        "powershell": "if (Test-Path RoslynLspHook.exe) { & .\\RoslynLspHook.exe postToolUse }; exit 0",
+        "timeoutSec": 30
+      }
+    ]
+  }
+}

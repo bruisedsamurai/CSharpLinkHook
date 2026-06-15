@@ -5,6 +5,7 @@
         <TargetFramework>net10.0</TargetFramework>
         <Nullable>enable</Nullable>
         <DisableImplicitFSharpCoreReference>true</DisableImplicitFSharpCoreReference>
+        <PublishAot>true</PublishAot>
         <WarningsAsErrors>FS0025,Nullable,FS3260,FS3261,FS3262,FS3263,FS3264,FS3265,FS3268,FS3271,FS00430</WarningsAsErrors>
         <NoWarn>MT7091;NETSDK1206;NU1510</NoWarn>
     </PropertyGroup>

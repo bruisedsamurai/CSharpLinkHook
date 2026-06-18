@@ -22,7 +22,7 @@ no matter where they are invoked.
 
 ```bash
 # macOS / Linux
-./build.sh Plugin       # assemble the plugin into dist/roslyn-lsp-hook
+./build.sh Plugin       # assemble the plugin into dist/roslyn-lsp-hook (+ -vscode)
 ./build.sh              # Default: Clean + Test + Plugin
 ```
 
@@ -61,7 +61,59 @@ dist/roslyn-lsp-hook/
 
 `dist/` (and `publish/`) are git-ignored build output.
 
-## Install the plugin
+## VS Code agent-plugin variant
+
+`Plugin` also assembles a VS Code-compatible copy next to the CLI folder:
+
+```
+dist/roslyn-lsp-hook-vscode/
+├── .claude-plugin/
+│   └── plugin.json             # manifest (Claude plugin format; name unchanged)
+├── hooks/
+│   └── hooks.json              # PascalCase events, single `command`, ${CLAUDE_PLUGIN_ROOT}
+├── skills/
+│   └── roslyn-start/SKILL.md
+├── RoslynLspHook               # same binaries as the CLI folder
+└── CSharpLintHook.dll, *.dll
+```
+
+VS Code loads plugin hooks in Claude Code format, which differs from the Copilot
+CLI schema: event keys are PascalCase, each entry uses a single `command` (not
+split `bash`/`powershell`), and the plugin-root token is `${CLAUDE_PLUGIN_ROOT}`.
+The build translates `plugin/hooks.json` and `plugin/plugin.json` into this
+layout, choosing the `command` variant for the build's target OS — so this
+folder is platform-specific just like the binaries.
+
+### Install the VS Code variant
+
+For a plugin you installed with the Copilot CLI, VS Code auto-detects it under
+`~/.copilot/installed-plugins/` — nothing to do. To use this **locally built**
+folder instead, register it directly:
+
+1. Make sure agent plugins are enabled — set `chat.plugins.enabled` to `true` in
+   your VS Code settings.
+
+2. Add the absolute path of the built folder to `chat.pluginLocations` (`true`
+   enables it):
+
+   ```json
+   // settings.json
+   "chat.pluginLocations": {
+       "C:\\Users\\you\\Projects\\CSharpLinkHook\\dist\\roslyn-lsp-hook-vscode": true
+   }
+   ```
+
+3. Reload the window (**Developer: Reload Window**). The plugin appears in the
+   Extensions view under **Agent Plugins - Installed** (search `@agentPlugins`),
+   and its `roslyn-start` skill shows in **Chat: Configure Skills**.
+
+Because the setting points at the folder, a later `build.cmd Plugin` updates the
+plugin in place — just reload the window to pick up new binaries (no reinstall).
+
+Alternatively, to install from a Git repository rather than a local build, run
+**Chat: Install Plugin From Source** and pass the repo URL.
+
+## Install the plugin (Copilot CLI)
 
 Point the Copilot CLI at the produced folder to store it as an installed plugin:
 

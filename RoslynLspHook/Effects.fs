@@ -22,6 +22,13 @@ type Program<'a> =
     | LaunchLsp of LspConfig * (unit -> Program<'a>)
     /// Connect to the running server and fetch diagnostics for one file.
     | FetchDiagnostics of LspConfig * string * (Diagnostic list -> Program<'a>)
+    /// Connect to the running server and load a solution via `solution/open`.
+    | OpenSolution of LspConfig * string * (bool -> Program<'a>)
+    /// Spawn the detached background setup worker (install the server if missing,
+    /// start it, open the sole solution) and return immediately. Used by
+    /// sessionStart, whose own stdout is discarded by the CLI, so the work must
+    /// happen as a side effect in a process that outlives the hook.
+    | SpawnSetup of LspConfig * (unit -> Program<'a>)
 
 /// Monadic bind: thread the continuation through the program tree.
 let rec bind (f: 'a -> Program<'b>) (p: Program<'a>) : Program<'b> =
@@ -34,6 +41,8 @@ let rec bind (f: 'a -> Program<'b>) (p: Program<'a>) : Program<'b> =
     | ProbeLsp(name, k) -> ProbeLsp(name, fun b -> bind f (k b))
     | LaunchLsp(cfg, k) -> LaunchLsp(cfg, fun () -> bind f (k ()))
     | FetchDiagnostics(cfg, file, k) -> FetchDiagnostics(cfg, file, fun d -> bind f (k d))
+    | OpenSolution(cfg, path, k) -> OpenSolution(cfg, path, fun b -> bind f (k b))
+    | SpawnSetup(cfg, k) -> SpawnSetup(cfg, fun () -> bind f (k ()))
 
 let map (f: 'a -> 'b) (p: Program<'a>) : Program<'b> = bind (fun x -> Pure(f x)) p
 
@@ -47,6 +56,11 @@ let launchLsp (cfg: LspConfig) : Program<unit> = LaunchLsp(cfg, Pure)
 
 let fetchDiagnostics (cfg: LspConfig) (file: string) : Program<Diagnostic list> =
     FetchDiagnostics(cfg, file, Pure)
+
+let openSolution (cfg: LspConfig) (path: string) : Program<bool> =
+    OpenSolution(cfg, path, Pure)
+
+let spawnSetup (cfg: LspConfig) : Program<unit> = SpawnSetup(cfg, Pure)
 
 type ProgramBuilder() =
     member _.Return(x) = Pure x

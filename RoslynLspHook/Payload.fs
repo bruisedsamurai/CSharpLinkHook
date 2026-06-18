@@ -10,8 +10,10 @@ open RoslynLspHook.Common
 type Parsed =
     /// sessionStart for the given workspace cwd: start the language server.
     | DoSessionStart of cwd: string
-    /// postToolUse on a C# file to lint (None ⇒ nothing to do this turn).
-    | DoToolUse of cwd: string * file: string option
+    /// postToolUse on a C# file to lint (file None ⇒ nothing to do this turn). The
+    /// `toolResult` is the raw JSON of the tool's original result, echoed back with
+    /// diagnostics appended via `modifiedResult`.
+    | DoToolUse of cwd: string * file: string option * toolResult: string
     /// Event we do not act on (wrong event, malformed JSON, failed tool, …).
     | Ignore
 
@@ -117,6 +119,14 @@ let private inferEvent (root: JsonElement) : HookEvent =
         elif (tryProp root "source").IsSome then SessionStart
         else OtherEvent
 
+/// The raw JSON of the original tool result object, so we can echo it back as
+/// `modifiedResult` with our diagnostics appended. Accepts either the camelCase
+/// (`toolResult`) or VS Code-compatible (`tool_result`) shape; `{}` when absent.
+let private toolResultRaw (root: JsonElement) : string =
+    match tryProp root "toolResult" |> Option.orElse (tryProp root "tool_result") with
+    | Some tr -> tr.GetRawText()
+    | None -> "{}"
+
 let private parseToolUse (root: JsonElement) : Parsed =
     let cwd = cwdOf root
 
@@ -130,7 +140,7 @@ let private parseToolUse (root: JsonElement) : Parsed =
                 let full = resolvePath cwd raw
                 if isLintableCSharp full then Some full else None
 
-    DoToolUse(cwd, file)
+    DoToolUse(cwd, file, toolResultRaw root)
 
 /// Parse a hook payload. `hint` is the event name passed as the program's first
 /// argument (from the hook registration); when absent the event is inferred from

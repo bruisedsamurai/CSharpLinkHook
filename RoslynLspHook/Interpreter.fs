@@ -18,16 +18,22 @@ let rec runAsync (p: Program<'a>) : Async<'a> =
             Console.Out.Write s
             return! runAsync (k ())
         | LogLine(s, k) ->
-            eprintfn "%s" s
+            Console.Error.WriteLine s
             return! runAsync (k ())
         | DirExists(path, k) -> return! runAsync (k (Directory.Exists path))
         | ProbeLsp(name, k) -> return! runAsync (k (LspProcess.probe name 300))
         | LaunchLsp(cfg, k) ->
-            LspProcess.ensureStarted cfg
+            LspProcess.ensureBroker cfg
             return! runAsync (k ())
         | FetchDiagnostics(cfg, file, k) ->
             let! diags = LspClient.getDiagnostics cfg file
             return! runAsync (k diags)
+        | OpenSolution(cfg, path, k) ->
+            let! ok = LspClient.openSolution cfg path
+            return! runAsync (k ok)
+        | SpawnSetup(cfg, k) ->
+            LspProcess.spawnSetup cfg
+            return! runAsync (k ())
     }
 
 /// Convenience: interpret a program synchronously.

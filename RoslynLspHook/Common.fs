@@ -49,11 +49,15 @@ type HookState =
     | Dispatch
     /// SessionStart: validate the cwd, then start the LSP.
     | StartingSession of cwd: string
-    /// (Post)ToolUse carrying the resolved C# file to check (None ⇒ nothing to do).
-    | ToolEdited of file: string option
+    /// (Post)ToolUse carrying the resolved C# file to check (None ⇒ nothing to do)
+    /// plus the raw JSON of the tool's original result, which we echo back (with
+    /// our diagnostics appended) as `modifiedResult`.
+    | ToolEdited of file: string option * toolResult: string
     /// StartLSP: launch the server in the background; optionally continue to a file.
     | StartingLsp of pending: string option
     /// CheckLSPOpen: probe the pipe; exit if closed, else check the file.
-    | CheckingOpen of file: string
+    | CheckingOpen of file: string * toolResult: string
     /// CheckFile: fetch diagnostics for the file and return them to the agent.
-    | CheckingFile of file: string
+    | CheckingFile of file: string * toolResult: string
+    /// OpenSolution: scope the running server to a chosen .sln via `solution/open`.
+    | OpeningSolution of path: string

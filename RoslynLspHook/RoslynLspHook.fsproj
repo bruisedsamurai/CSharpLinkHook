@@ -15,8 +15,10 @@
         <Compile Include="Effects.fs"/>
         <Compile Include="Payload.fs"/>
         <Compile Include="Lsp.fs"/>
+        <Compile Include="Wire.fs"/>
         <Compile Include="Logic.fs"/>
         <Compile Include="LspProcess.fs"/>
+        <Compile Include="Broker.fs"/>
         <Compile Include="LspClient.fs"/>
         <Compile Include="Interpreter.fs"/>
         <Compile Include="Program.fs"/>

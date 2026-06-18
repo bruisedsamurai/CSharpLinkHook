@@ -21,7 +21,11 @@ let rec drive (cfg: LspConfig) (state: HookState) : Program<unit> =
             if not ok then
                 return ()
             else
-                return! drive cfg (StartingLsp None)
+                // The CLI discards a sessionStart hook's stdout (only its side effects
+                // survive), so we can't ask the agent to run a skill from here. Instead
+                // fire off a detached worker that installs/starts the server and opens
+                // the solution in the background, and return at once.
+                do! spawnSetup cfg
         }
 
     | StartingLsp pending ->
@@ -29,30 +33,42 @@ let rec drive (cfg: LspConfig) (state: HookState) : Program<unit> =
             do! launchLsp cfg
 
             match pending with
-            | Some file -> return! drive cfg (CheckingFile file)
+            | Some file -> return! drive cfg (CheckingFile(file, "{}"))
             | None -> return ()
         }
 
-    | ToolEdited None -> Pure()
-    | ToolEdited(Some file) -> drive cfg (CheckingOpen file)
+    | OpeningSolution path ->
+        program {
+            do! launchLsp cfg
+            let! _ = openSolution cfg path
+            return ()
+        }
 
-    | CheckingOpen file ->
+    | ToolEdited(None, _) -> Pure()
+    | ToolEdited(Some file, toolResult) -> drive cfg (CheckingOpen(file, toolResult))
+
+    | CheckingOpen(file, toolResult) ->
         program {
             let! isOpen = probeLsp cfg.PipeName
 
             if not isOpen then
+                // The broker isn't up yet (cold session, or it died). Kick off a
+                // detached setup worker to (re)start it so the *next* edit has
+                // diagnostics, then return silently — we never block or annotate
+                // this edit on a missing broker.
+                do! spawnSetup cfg
                 return ()
             else
-                return! drive cfg (CheckingFile file)
+                return! drive cfg (CheckingFile(file, toolResult))
         }
 
-    | CheckingFile file ->
+    | CheckingFile(file, toolResult) ->
         program {
             let! diags = fetchDiagnostics cfg file
 
             match Lsp.formatDiagnostics file diags with
             | None -> return ()
-            | Some ctx -> do! writeStdout (Lsp.buildHookOutput ctx)
+            | Some report -> do! writeStdout (Lsp.buildModifiedResult toolResult report)
         }
 
 /// Top-level hook program: read the payload, decide the event, and drive the
@@ -64,6 +80,6 @@ let hook (hint: HookEvent option) (mkConfig: string -> LspConfig) : Program<unit
 
         match Payload.parse hint input with
         | Payload.DoSessionStart cwd -> return! drive (mkConfig cwd) (StartingSession cwd)
-        | Payload.DoToolUse(cwd, fileOpt) -> return! drive (mkConfig cwd) (ToolEdited fileOpt)
+        | Payload.DoToolUse(cwd, fileOpt, toolResult) -> return! drive (mkConfig cwd) (ToolEdited(fileOpt, toolResult))
         | Payload.Ignore -> return ()
     }

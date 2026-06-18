@@ -48,6 +48,12 @@ let run (env: StubEnv) (p: Program<'a>) : 'a * string list =
         | FetchDiagnostics(_, file, k) ->
             log.Add("fetch:" + file)
             go (k env.Diagnostics)
+        | OpenSolution(_, path, k) ->
+            log.Add("opensolution:" + path)
+            go (k true)
+        | SpawnSetup(cfg, k) ->
+            log.Add("spawnsetup:" + cfg.PipeName)
+            go (k ())
 
     let result = go p
     result, List.ofSeq log

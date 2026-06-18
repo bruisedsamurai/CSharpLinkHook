@@ -11,6 +11,7 @@
         <Compile Include="PayloadTests.fs"/>
         <Compile Include="LspTests.fs"/>
         <Compile Include="StateMachineTests.fs"/>
+        <Compile Include="BrokerIntegrationTests.fs"/>
     </ItemGroup>
 
     <ItemGroup>

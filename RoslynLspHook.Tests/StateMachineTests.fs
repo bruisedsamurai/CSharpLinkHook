@@ -38,18 +38,20 @@ let private hook (env: StubEnv) =
 // --- sessionStart -----------------------------------------------------------
 
 [<Fact>]
-let ``sessionStart checks the cwd then launches the server in the background`` () =
+let ``sessionStart checks the cwd then spawns the background setup worker`` () =
     let env = { defaultEnv with Stdin = sessionStartPayload "/work" }
     let (_, log) = hook env
 
     Assert.True(has "direxists:" log)
-    Assert.True(has "launch:" log)
-    // The LSP launch happens; we never probe or fetch on sessionStart.
+    Assert.True(has "spawnsetup:" log)
+    // The hook only spawns the detached worker; the actual install/launch happens
+    // in that worker, so the hook itself never launches, probes, fetches or writes.
+    Assert.False(has "launch:" log)
     Assert.False(has "fetch:" log)
     Assert.False(has "stdout:" log)
 
 [<Fact>]
-let ``sessionStart with a missing cwd does not launch`` () =
+let ``sessionStart with a missing cwd does not spawn the worker`` () =
     let env =
         { defaultEnv with
             Stdin = sessionStartPayload "/nope"
@@ -57,12 +59,12 @@ let ``sessionStart with a missing cwd does not launch`` () =
 
     let (_, log) = hook env
     Assert.True(has "direxists:" log)
-    Assert.False(has "launch:" log)
+    Assert.False(has "spawnsetup:" log)
 
 // --- postToolUse ------------------------------------------------------------
 
 [<Fact>]
-let ``postToolUse probes the pipe, fetches diagnostics, and emits context`` () =
+let ``postToolUse probes the pipe, fetches diagnostics, and emits modifiedResult`` () =
     let env =
         { defaultEnv with
             Stdin = toolUsePayload "/work" "A.cs"
@@ -76,13 +78,16 @@ let ``postToolUse probes the pipe, fetches diagnostics, and emits context`` () =
 
     match value "stdout:" log with
     | Some out ->
-        Assert.Contains("additionalContext", out)
+        Assert.Contains("modifiedResult", out)
+        Assert.Contains("textResultForLlm", out)
         Assert.Contains("missing semicolon", out)
         Assert.Contains("CS1002", out)
-    | None -> Assert.Fail "expected the hook to emit additionalContext"
+        // The original tool result is preserved, not clobbered.
+        Assert.Contains("success", out)
+    | None -> Assert.Fail "expected the hook to emit a modifiedResult"
 
 [<Fact>]
-let ``postToolUse exits quietly when the pipe is not open`` () =
+let ``postToolUse self-heals when the pipe is not open but never fetches or emits`` () =
     let env =
         { defaultEnv with
             Stdin = toolUsePayload "/work" "A.cs"
@@ -92,7 +97,9 @@ let ``postToolUse exits quietly when the pipe is not open`` () =
     let (_, log) = hook env
 
     Assert.True(has "probe:" log)
-    // Pipe closed: we must not fetch or emit anything.
+    // Pipe closed: kick off a detached worker to (re)start the broker for next time...
+    Assert.True(has "spawnsetup:" log)
+    // ...but we must not fetch or emit anything for this edit.
     Assert.False(has "fetch:" log)
     Assert.False(has "stdout:" log)
 

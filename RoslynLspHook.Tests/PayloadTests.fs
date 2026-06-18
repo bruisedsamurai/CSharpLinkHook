@@ -37,7 +37,7 @@ let private payloadSnakeCase (cwd: string) (resultType: string) (relPath: string
 
 let private fileOf (p: Parsed) : string option =
     match p with
-    | DoToolUse(_, f) -> f
+    | DoToolUse(_, f, _) -> f
     | _ -> None
 
 [<Fact>]

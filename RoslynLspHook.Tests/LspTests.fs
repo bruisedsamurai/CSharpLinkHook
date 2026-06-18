@@ -228,7 +228,69 @@ let ``formatDiagnostics caps the list and notes the remainder`` () =
     | None -> Assert.Fail "expected formatted diagnostics"
 
 [<Fact>]
-let ``buildHookOutput wraps the context as additionalContext JSON`` () =
-    let s = buildHookOutput "hello\nworld"
+let ``buildModifiedResult appends the report to textResultForLlm and keeps other fields`` () =
+    let original = """{"resultType":"success","textResultForLlm":"Edited A.cs"}"""
+    let s = buildModifiedResult original "DIAGS HERE"
     use doc = parseDoc s
-    Assert.Equal("hello\nworld", doc.RootElement.GetProperty("additionalContext").GetString())
+    let mr = doc.RootElement.GetProperty("modifiedResult")
+    Assert.Equal("success", mr.GetProperty("resultType").GetString())
+    let text = mr.GetProperty("textResultForLlm").GetString()
+    Assert.Contains("Edited A.cs", text)
+    Assert.Contains("DIAGS HERE", text)
+
+[<Fact>]
+let ``buildModifiedResult sets textResultForLlm when the original result is empty`` () =
+    let s = buildModifiedResult "{}" "ONLY DIAGS"
+    use doc = parseDoc s
+    let mr = doc.RootElement.GetProperty("modifiedResult")
+    Assert.Equal("ONLY DIAGS", mr.GetProperty("textResultForLlm").GetString())
+
+// --- broker protocol --------------------------------------------------------
+
+[<Fact>]
+let ``parseBrokerCommand round-trips a diag request`` () =
+    match parseBrokerCommand (brokerDiagRequest "C:\\work\\A.cs") with
+    | Diag p -> Assert.Equal("C:\\work\\A.cs", p)
+    | other -> Assert.Fail(sprintf "expected Diag, got %A" other)
+
+[<Fact>]
+let ``parseBrokerCommand round-trips an open request`` () =
+    match parseBrokerCommand (brokerOpenRequest "C:\\work\\S.slnx") with
+    | Open p -> Assert.Equal("C:\\work\\S.slnx", p)
+    | other -> Assert.Fail(sprintf "expected Open, got %A" other)
+
+[<Fact>]
+let ``parseBrokerCommand returns Unknown for junk or a missing path`` () =
+    Assert.Equal(Unknown, parseBrokerCommand "not json")
+    Assert.Equal(Unknown, parseBrokerCommand """{"cmd":"diag"}""")
+    Assert.Equal(Unknown, parseBrokerCommand """{"cmd":"frobnicate","path":"x"}""")
+
+[<Fact>]
+let ``serialize then deserialize diagnostics round-trips`` () =
+    let ds =
+        [ { Severity = Error
+            Line = 3
+            Character = 5
+            Message = "boom"
+            Code = Some "CS1002"
+            Source = Some "Roslyn" }
+          { Severity = Warning
+            Line = 0
+            Character = 0
+            Message = "meh"
+            Code = None
+            Source = None } ]
+
+    let round = deserializeDiagnostics (serializeDiagnostics ds)
+    Assert.Equal<Diagnostic list>(ds, round)
+
+[<Fact>]
+let ``deserializeDiagnostics is empty for junk or an empty list`` () =
+    Assert.Empty(deserializeDiagnostics "not json")
+    Assert.Empty(deserializeDiagnostics """{"diagnostics":[]}""")
+
+[<Fact>]
+let ``parseOk reads the ok flag`` () =
+    Assert.True(parseOk (brokerOkReply ()))
+    Assert.False(parseOk """{"ok":false}""")
+    Assert.False(parseOk "not json")

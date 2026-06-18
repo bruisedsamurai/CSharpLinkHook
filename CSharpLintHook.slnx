@@ -1,0 +1,11 @@
+<Solution>
+  <Configurations>
+    <Platform Name="Any CPU" />
+    <Platform Name="x64" />
+    <Platform Name="x86" />
+  </Configurations>
+  <Project Path="CSharpLintHook.Tests/CSharpLintHook.Tests.fsproj" />
+  <Project Path="CSharpLintHook/CSharpLintHook.fsproj" />
+  <Project Path="RoslynLspHook.Tests/RoslynLspHook.Tests.fsproj" />
+  <Project Path="RoslynLspHook/RoslynLspHook.fsproj" />
+</Solution>

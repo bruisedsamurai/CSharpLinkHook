@@ -5,3 +5,7 @@
 # FAKE build artifacts
 publish/
 dist/
+
+# AI tools
+.idea
+goal

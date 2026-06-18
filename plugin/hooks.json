@@ -3,23 +3,26 @@
   "hooks": {
     "sessionStart": [
       {
-        "type": "prompt",
-        "prompt": "Ensure the Roslyn language server is running for this workspace by using the roslyn-start skill. Detect the .sln/.csproj (ask me to choose if there are several), install Microsoft.CodeAnalysis.LanguageServer via dotnet if it is missing, then start it. If it is already running, stay silent and do nothing."
+        "type": "command",
+        "cwd": ".",
+        "bash": "test -x \"${PLUGIN_ROOT}/RoslynLspHook\" && \"${PLUGIN_ROOT}/RoslynLspHook\" sessionStart || true",
+        "powershell": "if (Test-Path \"${PLUGIN_ROOT}\\RoslynLspHook.exe\") { & \"${PLUGIN_ROOT}\\RoslynLspHook.exe\" sessionStart }; exit 0",
+        "timeoutSec": 30
       }
     ],
     "postToolUse": [
       {
         "type": "command",
         "cwd": ".",
-        "bash": "test -f CSharpLintHook.dll && dotnet CSharpLintHook.dll hook || true",
-        "powershell": "if (Test-Path CSharpLintHook.dll) { dotnet CSharpLintHook.dll hook }; exit 0",
+        "bash": "test -f \"${PLUGIN_ROOT}/CSharpLintHook.dll\" && dotnet \"${PLUGIN_ROOT}/CSharpLintHook.dll\" hook || true",
+        "powershell": "if (Test-Path \"${PLUGIN_ROOT}\\CSharpLintHook.dll\") { dotnet \"${PLUGIN_ROOT}\\CSharpLintHook.dll\" hook }; exit 0",
         "timeoutSec": 60
       },
       {
         "type": "command",
         "cwd": ".",
-        "bash": "test -x ./RoslynLspHook && ./RoslynLspHook postToolUse || true",
-        "powershell": "if (Test-Path RoslynLspHook.exe) { & .\\RoslynLspHook.exe postToolUse }; exit 0",
+        "bash": "test -x \"${PLUGIN_ROOT}/RoslynLspHook\" && \"${PLUGIN_ROOT}/RoslynLspHook\" postToolUse || true",
+        "powershell": "if (Test-Path \"${PLUGIN_ROOT}\\RoslynLspHook.exe\") { & \"${PLUGIN_ROOT}\\RoslynLspHook.exe\" postToolUse }; exit 0",
         "timeoutSec": 30
       }
     ]

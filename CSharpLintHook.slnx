@@ -1,11 +1,22 @@
 <Solution>
-  <Configurations>
-    <Platform Name="Any CPU" />
-    <Platform Name="x64" />
-    <Platform Name="x86" />
-  </Configurations>
-  <Project Path="CSharpLintHook.Tests/CSharpLintHook.Tests.fsproj" />
-  <Project Path="CSharpLintHook/CSharpLintHook.fsproj" />
-  <Project Path="RoslynLspHook.Tests/RoslynLspHook.Tests.fsproj" />
-  <Project Path="RoslynLspHook/RoslynLspHook.fsproj" />
+    <Configurations>
+        <Platform Name="Any CPU"/>
+        <Platform Name="x64"/>
+        <Platform Name="x86"/>
+    </Configurations>
+    <Folder Name="/plugin/">
+        <File Path="plugin/hooks.json"/>
+        <File Path="plugin/plugin.json"/>
+    </Folder>
+    <Folder Name="/plugin/skills/"/>
+    <Folder Name="/plugin/skills/roslyn-start/">
+        <File Path="plugin/skills/roslyn-start/SKILL.md"/>
+    </Folder>
+    <Folder Name="/Solution Items/">
+        <File Path="README.md"/>
+    </Folder>
+    <Project Path="CSharpLintHook.Tests/CSharpLintHook.Tests.fsproj"/>
+    <Project Path="CSharpLintHook/CSharpLintHook.fsproj"/>
+    <Project Path="RoslynLspHook.Tests/RoslynLspHook.Tests.fsproj"/>
+    <Project Path="RoslynLspHook/RoslynLspHook.fsproj"/>
 </Solution>

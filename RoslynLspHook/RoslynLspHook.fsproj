@@ -25,6 +25,10 @@
     </ItemGroup>
 
     <ItemGroup>
+        <None Include="README.md"/>
+    </ItemGroup>
+
+    <ItemGroup>
         <PackageReference Include="FSharp.Core" Version="10.1.301"/>
     </ItemGroup>
 

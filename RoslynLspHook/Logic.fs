@@ -69,15 +69,18 @@ let rec drive (cfg: LspConfig) (state: HookState) : Program<unit> =
             | Some report -> do! writeStdout (Lsp.buildModifiedResult toolResult report)
         }
 
-/// Top-level hook program: read the payload, decide the event, and drive the
-/// state machine. `mkConfig` turns the payload's cwd into a full `LspConfig`
-/// (built from environment at the composition root, so this stays pure).
-let hook (hint: HookEvent option) (mkConfig: string -> LspConfig) : Program<unit> =
+/// Top-level hook program: read the stdin payload, decode it into a typed
+/// `Payload.HookPayload` model (via Thoth.Json.Net) — the payload's own shape
+/// selects the event — and drive the state machine off that model, most notably
+/// its `Cwd`. `mkConfig` turns the payload's cwd into a full `LspConfig` (built
+/// from the environment at the composition root, so this stays pure).
+let hook (mkConfig: string -> LspConfig) : Program<unit> =
     program {
         let! input = readStdin
 
-        match Payload.parse hint input with
-        | Payload.DoSessionStart cwd -> return! drive (mkConfig cwd) (StartingSession cwd)
-        | Payload.DoToolUse(cwd, fileOpt, toolResult) -> return! drive (mkConfig cwd) (ToolEdited(fileOpt, toolResult))
-        | Payload.Ignore -> return ()
+        match Payload.decode input with
+        | Payload.SessionStartEvent payload -> return! drive (mkConfig payload.Cwd) (StartingSession payload.Cwd)
+        | Payload.PostToolUseEvent payload ->
+            return! drive (mkConfig payload.Cwd) (ToolEdited(Payload.lintTarget payload, payload.ToolResultRaw))
+        | Payload.IgnoredEvent -> return ()
     }

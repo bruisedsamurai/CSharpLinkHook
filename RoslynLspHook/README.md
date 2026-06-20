@@ -76,7 +76,7 @@ is therefore pure and testable against a stub interpreter.
 | `RoslynLsp`     | `Broker.fs`      | The long-lived **broker**: owns one warm `--stdio` Roslyn server, hosts the workspace pipe (single instance), pumps the server's stdout, and answers broker clients' diagnostic/open requests. |
 | `RoslynLsp`     | `Program.fs`     | Daemon entry: take the cwd argument → `ensureInstalled` → `runBroker`.       |
 | `RoslynLspHook` | `Effects.fs`     | `Program<'a>` free monad + smart constructors + `program { }` builder.      |
-| `RoslynLspHook` | `Payload.fs`     | Pure parse of `sessionStart` / `postToolUse` payloads (camelCase + VS Code). |
+| `RoslynLspHook` | `Payload.fs`     | Decode `sessionStart` / `postToolUse` payloads (camelCase + VS Code) into typed records with Thoth.Json.Net; the event is whichever record decodes. |
 | `RoslynLspHook` | `Logic.fs`       | Pure state machine (`drive`) + `hook` entry (read stdin → parse → drive).    |
 | `RoslynLspHook` | `Interpreter.fs` | `runAsync` — the only module that performs IO.                              |
 | `RoslynLspHook` | `Program.fs`     | Stdin-driven entry: run the `hook` program (no argv verbs).                 |
@@ -118,7 +118,12 @@ dotnet test  -c Release RoslynLspHook.Tests/RoslynLspHook.Tests.fsproj
 ```
 
 Target framework `net10.0`, nullable reference types enabled (most nullness
-warnings are errors). Only dependency is `FSharp.Core`.
+warnings are errors). Dependencies are `FSharp.Core` and `Thoth.Json.Net` (which
+brings in `Newtonsoft.Json`), used to decode the stdin payload into typed records.
+The decoders are hand-written Thoth `Decoder`s over LINQ-to-JSON (no reflection-based
+`Decode.Auto`), so the published Native-AOT binary parses both payload casings at
+runtime — verified by publishing the AOT exe and exercising it against real
+`sessionStart` / `postToolUse` payloads.
 
 The hook ships as a **Native-AOT** executable (`build.cmd Plugin`). AOT cannot create
 value-type generic instantiations at runtime, which the F# `printf`/`sprintf` family

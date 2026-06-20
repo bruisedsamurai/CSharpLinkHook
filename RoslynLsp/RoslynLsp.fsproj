@@ -11,19 +11,14 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <Compile Include="Effects.fs"/>
-        <Compile Include="Payload.fs"/>
-        <Compile Include="Logic.fs"/>
-        <Compile Include="Interpreter.fs"/>
+        <Compile Include="Common.fs"/>
+        <Compile Include="Lsp.fs"/>
+        <Compile Include="Wire.fs"/>
+        <Compile Include="LspProcess.fs"/>
+        <Compile Include="LspClient.fs"/>
+        <Compile Include="Config.fs"/>
+        <Compile Include="Broker.fs"/>
         <Compile Include="Program.fs"/>
-    </ItemGroup>
-
-    <ItemGroup>
-        <None Include="README.md"/>
-    </ItemGroup>
-
-    <ItemGroup>
-        <ProjectReference Include="..\RoslynLsp\RoslynLsp.fsproj"/>
     </ItemGroup>
 
     <ItemGroup>

@@ -12,8 +12,6 @@ open RoslynLspHook.Effects
 ///                                             └─ CheckingFile ─▶ emit context
 let rec drive (cfg: LspConfig) (state: HookState) : Program<unit> =
     match state with
-    | Dispatch -> Pure() // resolved in `hook` before driving; never reached here.
-
     | StartingSession cwd ->
         program {
             let! ok = dirExists cwd

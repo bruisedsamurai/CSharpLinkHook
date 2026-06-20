@@ -38,15 +38,15 @@ type LspConfig =
       /// Upper bound (ms) on how long a single diagnostics fetch may wait.
       WaitMs: int }
 
-/// States of the hook's control flow. The flow is intentionally a tiny explicit
-/// state machine so it maps 1:1 onto the documented design:
+/// States of the hook's control flow. The hook's `main` parses the stdin payload
+/// and enters at `StartingSession` (sessionStart) or `ToolEdited` (postToolUse);
+/// from there the flow is a tiny explicit state machine that maps 1:1 onto the
+/// documented design:
 ///
-///   Dispatch ─┬─ SessionStart ─▶ StartingSession ─▶ StartingLsp ─▶ (done)
-///             └─ PostToolUse  ─▶ ToolEdited ─▶ CheckingOpen ─┬─ (not open) ─▶ done
-///                                                            └─ CheckingFile ─▶ emit
+///   StartingSession ─▶ SpawnSetup (detached `RoslynLsp` daemon) ─▶ (done)
+///   ToolEdited ─▶ CheckingOpen ─┬─ (not open) ─▶ SpawnSetup (self-heal) ─▶ done
+///                               └─ CheckingFile ─▶ emit modifiedResult
 type HookState =
-    /// Pure/Empty: decide which event we are handling.
-    | Dispatch
     /// SessionStart: validate the cwd, then start the LSP.
     | StartingSession of cwd: string
     /// (Post)ToolUse carrying the resolved C# file to check (None ⇒ nothing to do)

@@ -5,8 +5,8 @@
       {
         "type": "command",
         "cwd": ".",
-        "bash": "test -x \"${PLUGIN_ROOT}/RoslynLspHook\" && \"${PLUGIN_ROOT}/RoslynLspHook\" sessionStart || true",
-        "powershell": "if (Test-Path \"${PLUGIN_ROOT}\\RoslynLspHook.exe\") { & \"${PLUGIN_ROOT}\\RoslynLspHook.exe\" sessionStart }; exit 0",
+        "bash": "test -x \"${PLUGIN_ROOT}/RoslynLspHook\" && \"${PLUGIN_ROOT}/RoslynLspHook\" || true",
+        "powershell": "if (Test-Path \"${PLUGIN_ROOT}\\RoslynLspHook.exe\") { & \"${PLUGIN_ROOT}\\RoslynLspHook.exe\" }; exit 0",
         "timeoutSec": 30
       }
     ],
@@ -21,8 +21,8 @@
       {
         "type": "command",
         "cwd": ".",
-        "bash": "test -x \"${PLUGIN_ROOT}/RoslynLspHook\" && \"${PLUGIN_ROOT}/RoslynLspHook\" postToolUse || true",
-        "powershell": "if (Test-Path \"${PLUGIN_ROOT}\\RoslynLspHook.exe\") { & \"${PLUGIN_ROOT}\\RoslynLspHook.exe\" postToolUse }; exit 0",
+        "bash": "test -x \"${PLUGIN_ROOT}/RoslynLspHook\" && \"${PLUGIN_ROOT}/RoslynLspHook\" || true",
+        "powershell": "if (Test-Path \"${PLUGIN_ROOT}\\RoslynLspHook.exe\") { & \"${PLUGIN_ROOT}\\RoslynLspHook.exe\" }; exit 0",
         "timeoutSec": 30
       }
     ]

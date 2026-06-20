@@ -9,14 +9,15 @@ open Xunit
 open RoslynLspHook.Common
 
 // End-to-end check against the REAL roslyn-language-server: spawn the broker the
-// way production does — as its own `RoslynLspHook broker` process — over a
-// throwaway project that has a deliberate compiler error, then connect as a broker
-// client and assert we get a `CS####` diagnostic back. This exercises the whole new
-// topology (broker process hosts the pipe, owns a --stdio child, answers the broker
-// protocol) that the unit tests can only stub. Running the broker out-of-process
-// (rather than in-proc) also matches the real deployment and avoids starving the
-// test runner's thread pool. It skips cleanly — passing as a no-op — when the
-// language server tool or SDK isn't available, so the suite still runs without them.
+// way production does — as its own `RoslynLsp` daemon process (handed the project
+// dir as its cwd argument) over a throwaway project that has a deliberate compiler
+// error, then connect as a broker client and assert we get a `CS####` diagnostic
+// back. This exercises the whole new topology (broker process hosts the pipe, owns
+// a --stdio child, answers the broker protocol) that the unit tests can only stub.
+// Running the broker out-of-process (rather than in-proc) also matches the real
+// deployment and avoids starving the test runner's thread pool. It skips cleanly —
+// passing as a no-op — when the language server tool or SDK isn't available, so the
+// suite still runs without them.
 
 let private csCode = Regex(@"^CS\d+$", RegexOptions.Compiled)
 
@@ -87,13 +88,14 @@ let private prepare (dir: string) : bool =
     && dotnet dir [ "sln"; "Itest.sln"; "add"; "Itest.csproj" ]
     && dotnet dir [ "restore"; "Itest.sln" ]
 
-/// Spawn the broker as its own process via the `broker` verb, pinned to `pipe`
-/// (and the throwaway project's `dir`) through environment variables. The broker
-/// dll sits beside this test assembly thanks to the project reference. Returns the
-/// running process, or None if the broker dll can't be found. stdout/stderr are
-/// drained so the child never blocks on a full pipe buffer.
+/// Spawn the broker daemon (`RoslynLsp`) as its own process, handing it the
+/// throwaway project's `dir` EXPLICITLY as its cwd argument and pinning the pipe
+/// through an environment variable. The daemon dll sits beside this test assembly
+/// thanks to the project reference. Returns the running process, or None if the
+/// daemon dll can't be found. stdout/stderr are drained so the child never blocks
+/// on a full pipe buffer.
 let private spawnBroker (dir: string) (pipe: string) : Process option =
-    let dll = Path.Combine(AppContext.BaseDirectory, "RoslynLspHook.dll")
+    let dll = Path.Combine(AppContext.BaseDirectory, "RoslynLsp.dll")
 
     if not (File.Exists dll) then
         None
@@ -109,7 +111,7 @@ let private spawnBroker (dir: string) (pipe: string) : Process option =
             )
 
         psi.ArgumentList.Add dll
-        psi.ArgumentList.Add "broker"
+        psi.ArgumentList.Add dir
         psi.Environment["ROSLYN_LSP_PIPE"] <- pipe
         psi.Environment["ROSLYN_LSP_WAIT_MS"] <- "8000"
 

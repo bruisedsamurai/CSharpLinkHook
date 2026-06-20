@@ -24,6 +24,7 @@
 
     <ItemGroup>
         <ProjectReference Include="..\RoslynLspHook\RoslynLspHook.fsproj"/>
+        <ProjectReference Include="..\RoslynLsp\RoslynLsp.fsproj"/>
     </ItemGroup>
 
 </Project>

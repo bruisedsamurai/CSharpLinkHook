@@ -33,10 +33,12 @@ let distPlugin = distRoot </> pluginName
 let distPluginVsCode = distRoot </> (pluginName + "-vscode")
 let publishRoot = "publish"
 let roslynPublish = publishRoot </> "RoslynLspHook"
+let daemonPublish = publishRoot </> "RoslynLsp"
 let csharpPublish = publishRoot </> "CSharpLintHook"
 let roslynProj = "RoslynLspHook" </> "RoslynLspHook.fsproj"
+let daemonProj = "RoslynLsp" </> "RoslynLsp.fsproj"
 let csharpProj = "CSharpLintHook" </> "CSharpLintHook.fsproj"
-let solution = "CSharpLintHook.sln"
+let solution = "CSharpLintHook.slnx"
 
 /// Restore the executable bit that File.Copy drops on Unix.
 let private setExecutable (path: string) =
@@ -168,6 +170,25 @@ let initTargets () =
         for f in Directory.GetFiles(roslynPublish, "*.pdb") do
             File.Delete f)
 
+    // RoslynLsp (the broker daemon) -> Native AOT single binary (PublishAot is set
+    // in its fsproj). The hook spawns this binary on sessionStart / self-heal, so it
+    // ships flattened into the plugin root right beside the hook.
+    Target.create "PublishDaemon" (fun _ ->
+        Shell.cleanDir daemonPublish
+
+        daemonProj
+        |> publish (fun o ->
+            { o with
+                Runtime = Some rid
+                OutputPath = Some daemonPublish })
+
+        // The shippable artifact is the single native binary; drop debug symbols.
+        for d in Directory.GetDirectories(daemonPublish, "*.dSYM") do
+            Shell.rm_rf d
+
+        for f in Directory.GetFiles(daemonPublish, "*.pdb") do
+            File.Delete f)
+
     // CSharpLintHook -> framework-dependent (Roslyn + MEF are not AOT-safe).
     // Portable DLLs, no native apphost; invoked via `dotnet CSharpLintHook.dll`.
     Target.create "PublishCSharp" (fun _ ->
@@ -197,9 +218,11 @@ let initTargets () =
         Shell.copyDir (distPlugin </> "skills") (pluginSrc </> "skills") (fun _ -> true)
 
         Shell.copyDir distPlugin roslynPublish (fun _ -> true)
+        Shell.copyDir distPlugin daemonPublish (fun _ -> true)
         Shell.copyDir distPlugin csharpPublish (fun _ -> true)
 
         setExecutable (distPlugin </> "RoslynLspHook")
+        setExecutable (distPlugin </> "RoslynLsp")
 
         Trace.tracefn "Assembled plugin '%s' at %s (rid=%s)" pluginName distPlugin rid
 
@@ -215,9 +238,11 @@ let initTargets () =
         Shell.copyDir (distPluginVsCode </> "skills") (pluginSrc </> "skills") (fun _ -> true)
 
         Shell.copyDir distPluginVsCode roslynPublish (fun _ -> true)
+        Shell.copyDir distPluginVsCode daemonPublish (fun _ -> true)
         Shell.copyDir distPluginVsCode csharpPublish (fun _ -> true)
 
         setExecutable (distPluginVsCode </> "RoslynLspHook")
+        setExecutable (distPluginVsCode </> "RoslynLsp")
 
         Trace.tracefn "Assembled VS Code plugin variant at %s (rid=%s)" distPluginVsCode rid)
 
@@ -225,6 +250,7 @@ let initTargets () =
 
     // Build graph
     "PublishRoslyn" ==> "Plugin" |> ignore
+    "PublishDaemon" ==> "Plugin" |> ignore
     "PublishCSharp" ==> "Plugin" |> ignore
 
     "Clean" ==> "Default" |> ignore
@@ -234,8 +260,10 @@ let initTargets () =
     // Ordering when several of these run in one invocation
     "Clean" ?=> "Test" |> ignore
     "Clean" ?=> "PublishRoslyn" |> ignore
+    "Clean" ?=> "PublishDaemon" |> ignore
     "Clean" ?=> "PublishCSharp" |> ignore
     "Test" ?=> "PublishRoslyn" |> ignore
+    "Test" ?=> "PublishDaemon" |> ignore
     "Test" ?=> "PublishCSharp" |> ignore
 
 [<EntryPoint>]

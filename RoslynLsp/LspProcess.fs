@@ -216,14 +216,49 @@ let ensureInstalled (cfg: LspConfig) : unit =
     with ex ->
         logSetup cfg ("ensureInstalled error: " + ex.Message)
 
-/// Re-launch this same executable detached with the given args, so heavy setup
-/// runs in a process that outlives the sessionStart hook. Returns immediately.
+/// The broker daemon binary name: `RoslynLsp.exe` on Windows, `RoslynLsp` elsewhere.
+let private daemonExeName =
+    if RuntimeInformation.IsOSPlatform OSPlatform.Windows then
+        "RoslynLsp.exe"
+    else
+        "RoslynLsp"
+
+/// How to launch the broker daemon (`RoslynLsp`) that sits beside this binary.
+/// Prefer the native AOT exe shipped in the plugin; in a `dotnet build` layout
+/// there is only the managed `RoslynLsp.dll`, so fall back to `dotnet <dll>`.
+/// Returns the launcher plus any leading args (the dll for the dotnet fallback);
+/// the workspace cwd is appended by the caller. None when neither is found, so the
+/// caller skips launching quietly instead of erroring.
+let private daemonLauncher () : (string * string list) option =
+    try
+        let baseDir = AppContext.BaseDirectory
+        let native = Path.Combine(baseDir, daemonExeName)
+
+        if File.Exists native then
+            Some(native, [])
+        else
+            let dll = Path.Combine(baseDir, "RoslynLsp.dll")
+
+            if File.Exists dll then
+                match resolveExecutable "dotnet" with
+                | Some dotnet -> Some(dotnet, [ dll ])
+                | None -> None
+            else
+                None
+    with _ ->
+        None
+
+/// Launch the broker daemon (`RoslynLsp`) detached, passing the workspace cwd
+/// EXPLICITLY as its argument, so the heavy setup (install-if-missing → become the
+/// broker) runs in a separate program that outlives the short-lived hook. Because
+/// the daemon is a different executable it never re-enters the hook's stdin-driven
+/// entry point, so there is no re-entrancy and no spawn loop. Returns immediately.
 let spawnSetup (cfg: LspConfig) : unit =
-    match Environment.ProcessPath with
-    | null -> ()
-    | self ->
+    match daemonLauncher () with
+    | None -> ()
+    | Some(exe, args) ->
         let logPath = Path.Combine(Path.GetTempPath(), $"roslyn-lsp-{cfg.PipeName}-setup.log")
-        spawnDetached cfg.Cwd logPath self [ "setup" ]
+        spawnDetached cfg.Cwd logPath exe (args @ [ cfg.Cwd ])
 
 /// Ensure the broker is running. The broker hosts the pipe; if its pipe is not
 /// connectable we respawn the detached `setup` worker (install-if-missing → become

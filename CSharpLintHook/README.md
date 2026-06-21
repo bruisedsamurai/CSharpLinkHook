@@ -30,12 +30,12 @@ pure and testable (swap in a stub interpreter).
 |------------------|----------------------------------------------------------------------|
 | `Common.fs`      | Domain types: `LineRange`, `DiffResult`, `FormatResult`.             |
 | `Effects.fs`     | `Program<'a>` free monad, smart constructors, `program { }` builder. |
-| `Payload.fs`     | Pure parse/build of the postToolUse JSON payload.                    |
-| `Logic.fs`       | Pure programs: `hook`, `computeFormat`, `formatAndWrite`.            |
+| `Payload.fs`     | Pure decode/build of the postToolUse payload (`PostToolUse.decode`, Thoth.Json.Net). |
+| `Logic.fs`       | Pure programs: `hookFormat`, `hookRead`, `computeFormat`, `formatAndWrite`. |
 | `Git.fs`         | Interpreter backend: `git diff --unified=0 HEAD` -> changed ranges.  |
 | `Formatting.fs`  | Interpreter backend: node selection + `Formatter.FormatAsync`.       |
 | `Interpreter.fs` | `runAsync` — the only module that performs IO.                       |
-| `Program.fs`     | argv dispatch (`hook` / `format`).                                   |
+| `Program.fs`     | argv dispatch (`hook format` / `hook read` / `format`).              |
 
 Effects in the algebra: `readStdin`, `writeStdout`, `readFile`, `writeFile`,
 `fileExists`, `classifyDiff`, `formatWhole`, `formatRanges`, `logLine`.
@@ -47,9 +47,9 @@ cd CSharpLintHook
 dotnet build -c Release
 ```
 
-Packages: `Microsoft.CodeAnalysis.CSharp.Workspaces` (5.3.0) and `FSharp.Core`
-(10.1.301). Target framework `net10.0`, nullable reference types enabled (most
-nullness warnings are errors).
+Packages: `Microsoft.CodeAnalysis.CSharp.Workspaces` (5.3.0), `Thoth.Json.Net`
+(12.0.0), and `FSharp.Core` (10.1.301). Target framework `net10.0`, nullable
+reference types enabled (most nullness warnings are errors).
 
 ## Tests
 
@@ -66,15 +66,21 @@ binary + real Roslyn formatter), so it guards behaviour rather than mocks.
 | `PayloadTests`             | payload parsing for string-encoded **and** object `toolArgs`, camelCase + VS Code snake_case, every path key, `.cs`/generated/`bin`/`obj` guards |
 | `DiffAwareTests`           | only changed regions formatted; untouched code kept byte-for-byte; whole-file for untracked; idempotence; **two files** formatted independently |
 | `SymlinkRegressionTests`   | reaching a repo through a symlink stays diff-aware (guards the `Git.fs` fix) |
-| `HookTests`                | hook mode writes in place + emits `additionalContext` for the real string-encoded, object, and snake_case payloads; no-ops on failure / non-`.cs` / malformed payloads |
+| `HookTests`                | **format flow** writes in place + emits `additionalContext` for the real string-encoded, object, and snake_case payloads; **read flow** emits the RoslynLspMcp note when a `.cs` is touched; both no-op on failure / non-`.cs` / malformed payloads |
 
 
 ## CLI usage
 
 ```bash
-# Hook mode (default): read a postToolUse JSON payload from stdin, format the
+# Format flow (default): read a postToolUse JSON payload from stdin, format the
 # changed C# file in place, and emit additionalContext describing the change.
-dotnet CSharpLintHook/bin/Release/net10.0/CSharpLintHook.dll hook < payload.json
+# Wired (via the hooks.json matcher) to the edit/create tools.
+dotnet CSharpLintHook/bin/Release/net10.0/CSharpLintHook.dll hook format < payload.json
+
+# Read flow: when a read/search/shell tool touched a *.cs file, emit
+# additionalContext naming the RoslynLspMcp MCP methods. Wired (via the matcher)
+# to the bash/grep/view/powershell tools.
+dotnet ...CSharpLintHook.dll hook read < payload.json
 
 # Standalone formatting of a single file:
 dotnet ...CSharpLintHook.dll format path/to/File.cs --stdout   # print result (default)
@@ -87,11 +93,12 @@ path additionally restricts to `*.cs` and skips generated files and `bin`/`obj`.
 
 ## postToolUse hook
 
-`.github/hooks/postToolUse.json` runs the formatter in `hook` mode. The command is
+`plugin/hooks.json` wires the **format flow** to the `edit|create` tools via a
+matcher, so it runs only after the agent edits or creates a file. The command is
 **guarded** — it is a no-op until a Release build exists, so it never errors:
 
 ```jsonc
-"bash": "test -f CSharpLintHook/bin/Release/net10.0/CSharpLintHook.dll && dotnet CSharpLintHook/bin/Release/net10.0/CSharpLintHook.dll hook || true"
+"bash": "test -f CSharpLintHook/bin/Release/net10.0/CSharpLintHook.dll && dotnet CSharpLintHook/bin/Release/net10.0/CSharpLintHook.dll hook format || true"
 ```
 
 Run `dotnet build -c Release` to activate it. On success the hook writes
@@ -102,7 +109,7 @@ so the model knows the on-disk file was adjusted.
 
 The hook reads the `postToolUse` JSON payload from stdin and pulls the edited
 file out of the tool arguments. Copilot CLI delivers those arguments in more than
-one shape, and `Payload.parse` accepts all of them:
+one shape, and `Payload.PostToolUse.decode` (Thoth.Json.Net) accepts all of them:
 
 - **`toolArgs` as a JSON-encoded string** — the shape the live CLI actually
   sends, e.g. `"toolArgs": "{\"path\":\"C.cs\",\"file_text\":\"...\"}"`. The inner
@@ -114,13 +121,26 @@ one shape, and `Payload.parse` accepts all of them:
 
 The file path is taken from the first matching key of `path`, `file_path`,
 `filePath`, `filename`, `file`, or `target_file`. The hook only acts when the
-tool result was a success and the path is a real `.cs` file (not generated, not
-under `bin/`/`obj/`).
+tool result was a success and the path is a real C# or F# source file (`.cs`,
+`.csx`, `.fs`, `.fsi`, or `.fsx`; not generated, not under `bin/`/`obj/`).
 
 > A discovery helper, `.github/hooks/capture_post_tool_use.py`, remains in the
 > repo. It logs raw payloads (re-register it in `postToolUse.json` via
 > `uv run` if you need to inspect the exact `toolArgs` for a tool). Its
 > `postToolUse.log` output is transient and should not be committed.
+
+### Read flow (read/search/shell tools)
+
+A second `postToolUse` wiring runs `CSharpLintHook hook read` for the
+**read/search/shell** tools — `bash`, `grep`, `view`, and `powershell` — selected
+by the matcher `"bash|grep|view|powershell"`. It decodes the same payload and, only
+when the tool touched a `*.cs` file, emits a single `additionalContext` line naming
+the RoslynLspMcp MCP methods (`get_class_constructors_and_properties`,
+`get_class_methods`, `get_namespace_declarations`) so the model is reminded it can
+call them to learn more about C# symbols. The methods are named directly rather than
+the server, since the MCP server can be registered under any name in a user's
+config. The `.cs` check is pure path inspection, so — unlike the format flow — it
+never reads or reformats anything.
 
 ## Manual test recipe
 

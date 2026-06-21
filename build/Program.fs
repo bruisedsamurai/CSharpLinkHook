@@ -121,7 +121,7 @@ let private writeVsCodeHooks (srcPath: string) (destPath: string) =
                             let entry = node.AsObject()
                             let outEntry = JsonObject()
 
-                            for field in [ "type"; "cwd"; "timeoutSec"; "env" ] do
+                            for field in [ "type"; "matcher"; "cwd"; "timeoutSec"; "env" ] do
                                 match entry.[field] with
                                 | null -> ()
                                 | v -> outEntry.[field] <- v.DeepClone()

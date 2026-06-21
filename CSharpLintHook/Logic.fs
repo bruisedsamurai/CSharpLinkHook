@@ -52,30 +52,52 @@ let formatAndWrite (path: string) : Program<FormatResult * bool> =
             return (r, false)
     }
 
-/// The postToolUse hook: read the payload, format the touched C# file in place,
-/// and emit additionalContext so the model knows the on-disk file was adjusted.
-let hook: Program<unit> =
+/// The resolved supported source file a successful *edit* touched, or None when
+/// there is nothing to act on: the tool failed, named no file, or named one we
+/// skip (unsupported extension, generated, or under bin/obj). The format flow
+/// needs the exact path, so this reads a known toolArgs key; the read flow instead
+/// scans the raw args (see
+/// `Payload.referencesCSharpFile`).
+let private touchedSourceFile (info: Payload.PostToolUse.PostToolUse) : string option =
+    if not (Payload.PostToolUse.isSuccess info) then
+        None
+    else
+        Payload.PostToolUse.filePath info
+        |> Option.map (Payload.resolvePath info.Cwd)
+        |> Option.filter Payload.isFormattableCSharp
+
+/// The postToolUse *format* flow (wired to edit/create via the hooks.json matcher and
+/// selected by the `hook format` arg): when an edit touched a supported source file,
+/// reformat it in place and emit additionalContext so the model knows the on-disk
+/// file was adjusted.
+let hookFormat: Program<unit> =
     program {
         let! input = readStdin
 
-        match Payload.parse input with
+        match Payload.PostToolUse.decode input |> Option.bind touchedSourceFile with
         | None -> return ()
-        | Some info ->
-            if not info.Success then
-                return ()
+        | Some full ->
+            let! r, wrote = formatAndWrite full
+
+            if wrote then
+                do! writeStdout (Payload.buildHookOutput (Payload.buildAdditionalContext r))
             else
-                match info.FilePath with
-                | None -> return ()
-                | Some raw ->
-                    let full = Payload.resolvePath info.Cwd raw
+                return ()
+    }
 
-                    if not (Payload.isFormattableCSharp full) then
-                        return ()
-                    else
-                        let! (r, wrote) = formatAndWrite full
+/// The postToolUse *read* flow (wired to bash/grep/view/powershell via the hooks.json
+/// matcher and selected by the `hook read` arg): when the tool's args name a
+/// supported source file anywhere (a source-file token in toolArgs — a path, a
+/// `command`, a grep target), append a note pointing the model at the
+/// RoslynLspMcp MCP methods for symbol information.
+let hookRead: Program<unit> =
+    program {
+        let! input = readStdin
 
-                        if wrote then
-                            do! writeStdout (Payload.buildHookOutput (Payload.buildAdditionalContext r))
-                        else
-                            return ()
+        match Payload.PostToolUse.decode input with
+        | Some info when
+            Payload.PostToolUse.isSuccess info
+            && (info.ToolArgs |> Option.exists Payload.referencesCSharpFile) ->
+            do! writeStdout (Payload.buildHookOutput Payload.roslynMcpNote)
+        | _ -> return ()
     }

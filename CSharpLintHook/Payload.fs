@@ -2,133 +2,160 @@ module CSharpLintHook.Payload
 
 open System
 open System.IO
-open System.Text.Json
-open System.Text.Json.Nodes
+open System.Text.RegularExpressions
+open Thoth.Json.Net
 open CSharpLintHook.Common
 
-/// The fields we care about from a Copilot CLI postToolUse payload.
-type PayloadInfo =
-    { Cwd: string
-      ToolName: string
-      Success: bool
-      FilePath: string option }
+/// The postToolUse event schema, modelled faithfully. The Copilot CLI camelCase
+/// payload and the VS Code snake_case payload differ only in field names, so a single
+/// record models both; `decode` produces it and the derivations below (`isSuccess`,
+/// `filePath`) read it rather than baking computed values into the record.
+module PostToolUse =
 
-/// Keys a file-editing tool might use in toolArgs to name the affected file.
-let private pathKeys =
-    [ "path"; "file_path"; "filePath"; "filename"; "file"; "target_file" ]
+    /// The tool's result block: `resultType` / `textResultForLlm` (camelCase) or
+    /// `result_type` / `text_result_for_llm` (VS Code).
+    type ToolResult =
+        { ResultType: string
+          TextResultForLlm: string option }
 
-let private tryStringProp (el: JsonElement) (name: string) : string option =
-    if el.ValueKind = JsonValueKind.Object then
-        match el.TryGetProperty name with
-        | true, v when v.ValueKind = JsonValueKind.String ->
-            match v.GetString() with
-            | null -> None
-            | s -> Some s
-        | _ -> None
-    else
-        None
+    /// A decoded postToolUse payload, mirroring the event schema. `ToolArgs` is the
+    /// `unknown` tool-args captured as raw JSON text (the object serialized, or the
+    /// JSON-encoded string as delivered) so derivations can both pull out a path and
+    /// scan it for a `*.cs` reference.
+    type PostToolUse =
+        { SessionId: string option
+          Timestamp: string option
+          Cwd: string
+          ToolName: string
+          ToolArgs: string option
+          ToolResult: ToolResult }
 
-/// First string property in `el` (an object) matching one of `pathKeys`.
-let private pickPath (el: JsonElement) : string option =
-    pathKeys |> List.tryPick (tryStringProp el)
+    /// Keys a file-editing tool might use in toolArgs to name the affected file.
+    let private pathKeys =
+        [ "path"; "file_path"; "filePath"; "filename"; "file"; "target_file" ]
 
-/// Extract the affected file path from a tool-args value, which Copilot CLI
-/// delivers in one of two shapes:
-///   * a JSON-encoded *string*, e.g. "{\"path\":\"C.cs\",...}" (the real CLI
-///     postToolUse shape — `toolArgs`/`tool_input` arrives pre-serialized), or
-///   * a JSON *object*, e.g. { "path": "C.cs" } (as the type `unknown` allows).
-/// Handle both so the hook works against live payloads, not just object-shaped
-/// test fixtures.
-let private pathFromArgs (args: JsonElement) : string option =
-    match args.ValueKind with
-    | JsonValueKind.Object -> pickPath args
-    | JsonValueKind.String ->
-        match args.GetString() with
-        | null -> None
-        | inner ->
-            try
-                use innerDoc = JsonDocument.Parse inner
+    /// Find the affected file path inside a tool-args object, trying each `pathKeys`
+    /// field in order.
+    let private pathFieldDecoder: Decoder<string> =
+        pathKeys |> List.map (fun key -> Decode.field key Decode.string) |> Decode.oneOf
 
-                if innerDoc.RootElement.ValueKind = JsonValueKind.Object then
-                    // GetString() returns an independent managed copy, so the
-                    // path survives disposal of innerDoc below.
-                    pickPath innerDoc.RootElement
-                else
-                    None
-            with _ ->
-                None
-    | _ -> None
+    /// Capture the `unknown` tool-args as raw JSON text across both delivery shapes:
+    /// the JSON-encoded *string* as-is, or the *object* serialized back to JSON.
+    let private argsTextDecoder: Decoder<string option> =
+        Decode.oneOf
+            [ Decode.string |> Decode.map Some
+              Decode.value |> Decode.map (Encode.toString 0 >> Some) ]
 
-/// Look up a property by its camelCase name first, then its VS Code snake_case
-/// alias, returning the matching element if present.
-let private tryProp (root: JsonElement) (camel: string) (snake: string) : JsonElement option =
-    match root.TryGetProperty camel with
-    | true, v -> Some v
-    | _ ->
-        match root.TryGetProperty snake with
-        | true, v -> Some v
-        | _ -> None
+    /// `timestamp` is a number (camelCase) or an ISO string (VS Code); keep its text.
+    let private timestampDecoder: Decoder<string> =
+        Decode.oneOf [ Decode.string; Decode.value |> Decode.map (Encode.toString 0) ]
 
-/// Parse a postToolUse payload. Returns None when the JSON is malformed or not
-/// the expected object shape. Accepts both the camelCase event payload
-/// (`toolName`/`toolArgs`/`toolResult.resultType`) and the VS Code compatible
-/// snake_case payload (`tool_name`/`tool_input`/`tool_result.result_type`).
-/// Pure: parsing performs no IO.
-let parse (input: string) : PayloadInfo option =
-    try
-        use doc = JsonDocument.Parse input
-        let root = doc.RootElement
-
-        if root.ValueKind <> JsonValueKind.Object then
-            None
-        else
-            let cwd =
-                tryStringProp root "cwd"
+    /// Decode the payload for one field-naming convention. The nested result type is
+    /// *required*: its presence structurally identifies the schema, so it discriminates
+    /// the two casings inside the `oneOf` below.
+    let private decoderFor
+        (sessionIdField: string)
+        (toolNameField: string)
+        (toolArgsField: string)
+        (resultField: string)
+        (resultTypeField: string)
+        (textField: string)
+        : Decoder<PostToolUse> =
+        Decode.object (fun get ->
+            { SessionId = get.Optional.Field sessionIdField Decode.string
+              Timestamp = get.Optional.Field "timestamp" timestampDecoder
+              Cwd =
+                get.Optional.Field "cwd" Decode.string
                 |> Option.defaultWith Directory.GetCurrentDirectory
+              ToolName = get.Optional.Field toolNameField Decode.string |> Option.defaultValue ""
+              ToolArgs = get.Optional.Field toolArgsField argsTextDecoder |> Option.flatten
+              ToolResult =
+                { ResultType = get.Required.At [ resultField; resultTypeField ] Decode.string
+                  TextResultForLlm = get.Optional.At [ resultField; textField ] Decode.string } })
 
-            let toolName =
-                tryStringProp root "toolName"
-                |> Option.orElse (tryStringProp root "tool_name")
-                |> Option.defaultValue ""
+    /// The camelCase `postToolUse` schema.
+    let private camelCaseDecoder: Decoder<PostToolUse> =
+        decoderFor "sessionId" "toolName" "toolArgs" "toolResult" "resultType" "textResultForLlm"
 
-            let success =
-                match tryProp root "toolResult" "tool_result" with
-                | Some tr ->
-                    (tryStringProp tr "resultType" |> Option.orElse (tryStringProp tr "result_type")) = Some
-                        "success"
-                | None -> false
+    /// The VS Code compatible `PostToolUse` schema.
+    let private vsCodeDecoder: Decoder<PostToolUse> =
+        decoderFor "session_id" "tool_name" "tool_input" "tool_result" "result_type" "text_result_for_llm"
 
-            let filePath =
-                tryProp root "toolArgs" "tool_input" |> Option.bind pathFromArgs
+    /// Try the camelCase shape first, then the VS Code shape; the required result type
+    /// in each makes the wrong-casing shape fall through.
+    let private decoder: Decoder<PostToolUse> =
+        Decode.oneOf [ camelCaseDecoder; vsCodeDecoder ]
 
-            Some
-                { Cwd = cwd
-                  ToolName = toolName
-                  Success = success
-                  FilePath = filePath }
-    with _ ->
-        None
+    /// Decode a postToolUse payload string into the typed record. Returns None when the
+    /// JSON is malformed or is not a postToolUse schema. Pure: no IO.
+    let decode (input: string) : PostToolUse option =
+        try
+            match Decode.fromString decoder input with
+            | Ok info -> Some info
+            | Error _ -> None
+        with _ ->
+            None
 
-/// Resolve a possibly-relative tool path against the payload's cwd.
+    /// Whether the tool result was a success.
+    let isSuccess (info: PostToolUse) : bool =
+        info.ToolResult.ResultType = "success"
+
+    /// The affected file named by a known path key in the tool-args, if any. Used by
+    /// the format flow, which must target one specific on-disk file.
+    let filePath (info: PostToolUse) : string option =
+        info.ToolArgs
+        |> Option.bind (fun text ->
+            match Decode.fromString pathFieldDecoder text with
+            | Ok path -> Some path
+            | Error _ -> None)
+
+/// Resolve a possibly relative tool path against the payload's cwd.
 let resolvePath (cwd: string) (rawPath: string) : string =
     if Path.IsPathRooted rawPath then
         Path.GetFullPath rawPath
     else
         Path.GetFullPath(Path.Combine(cwd, rawPath))
 
-/// A C# file we should format: ends in .cs, not generated, not under bin/obj.
+/// A C# or F# source file we should act on: supported extension, not generated,
+/// not under bin/obj.
 let isFormattableCSharp (fullPath: string) : bool =
-    let isCs = fullPath.EndsWith(".cs", StringComparison.OrdinalIgnoreCase)
+    let hasSupportedExtension =
+        [ ".cs"; ".csx"; ".fs"; ".fsi"; ".fsx" ]
+        |> List.exists (fun extension -> fullPath.EndsWith(extension, StringComparison.OrdinalIgnoreCase))
 
     let isGenerated =
-        [ ".g.cs"; ".g.i.cs"; ".designer.cs"; ".generated.cs"; ".feature.cs" ]
+        [ ".g.cs"
+          ".g.i.cs"
+          ".designer.cs"
+          ".generated.cs"
+          ".feature.cs"
+          ".g.fs"
+          ".g.i.fs"
+          ".designer.fs"
+          ".generated.fs" ]
         |> List.exists (fun suffix -> fullPath.EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
 
     let inBuildDir =
         fullPath.Replace('\\', '/').Split('/')
         |> Array.exists (fun seg -> seg = "obj" || seg = "bin")
 
-    isCs && not isGenerated && not inBuildDir
+    hasSupportedExtension && not isGenerated && not inBuildDir
+
+/// Filename token (path-like, ending in a supported source extension); the
+/// trailing `\b` keeps project/web files (`.csproj`, `.fsproj`, `.css`,
+/// `.cshtml`) out.
+let private csFileToken =
+    Regex(@"[\w.\-/\\:]+\.(?:cs|csx|fs|fsi|fsx)\b", RegexOptions.IgnoreCase ||| RegexOptions.Compiled)
+
+/// True when `text` references at least one supported source file. The format flow
+/// pulls the exact edited path from a known toolArgs key, but read/search/shell tools
+/// (bash/powershell `command`, grep `paths`/`glob`) name the file wherever they like, so
+/// the read flow scans the whole toolArgs text for any source-file token and keeps those
+/// `isFormattableCSharp` accepts.
+let referencesCSharpFile (text: string) : bool =
+    csFileToken.Matches text
+    |> Seq.cast<Match>
+    |> Seq.exists (fun m -> isFormattableCSharp m.Value)
 
 /// Human-readable note describing what the hook changed.
 let buildAdditionalContext (r: FormatResult) : string =
@@ -136,16 +163,21 @@ let buildAdditionalContext (r: FormatResult) : string =
 
     let detail =
         if r.WholeFile then
-            sprintf "reformatted %s" name
+            $"reformatted %s{name}"
         else
-            sprintf "reformatted %d changed region(s) in %s" r.Regions name
+            $"reformatted %d{r.Regions} changed region(s) in %s{name}"
 
-    sprintf
-        "CSharpLintHook %s (whitespace/formatting only). The on-disk file now reflects the formatted version."
-        detail
+    $"CSharpLintHook %s{detail} (whitespace/formatting only). The on-disk file now reflects the formatted version."
+
+/// Note appended to the tool result for read/search/shell tools. It names the
+/// RoslynLspMcp MCP methods directly rather than the server, since the server can
+/// be registered under any name in a user's MCP config — the method names are the
+/// stable handle the model can act on.
+let roslynMcpNote =
+    "The MCP methods get_class_constructors_and_properties, get_class_methods, and "
+    + "get_namespace_declarations can be used to know more about symbols."
 
 /// Serialize the postToolUse hook response carrying additionalContext.
 let buildHookOutput (additionalContext: string) : string =
-    let o = JsonObject()
-    o["additionalContext"] <- JsonValue.Create additionalContext
-    o.ToJsonString()
+    Encode.object [ "additionalContext", Encode.string additionalContext ]
+    |> Encode.toString 0

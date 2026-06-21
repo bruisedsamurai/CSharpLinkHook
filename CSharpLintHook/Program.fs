@@ -17,8 +17,11 @@ let private usage () =
     eprintfn "CSharpLintHook — diff-aware Roslyn formatter"
     eprintfn ""
     eprintfn "Usage:"
-    eprintfn "  csharplinthook [hook]          Read a postToolUse JSON payload from stdin and"
-    eprintfn "                                 format the changed C# file in place."
+    eprintfn "  csharplinthook hook [format]   Read a postToolUse payload from stdin and reformat"
+    eprintfn "                                 the changed C# file in place (edit/create tools)."
+    eprintfn "  csharplinthook hook read       Read a postToolUse payload from stdin and, when a C#"
+    eprintfn "                                 file was read, append the RoslynLspMcp symbol note"
+    eprintfn "                                 (bash/grep/view/powershell tools)."
     eprintfn "  csharplinthook format <file>   Format the changed regions of <file>."
     eprintfn "      --stdout   write formatted text to stdout (default)"
     eprintfn "      --write    rewrite <file> in place if it changed"
@@ -64,10 +67,18 @@ let private runFormatCommand (rest: string list) : int =
 let main argv =
     match List.ofArray argv with
     | []
-    | [ "hook" ] ->
-        // Hook mode must never break the agent loop: swallow errors, exit 0.
+    | [ "hook" ]
+    | [ "hook"; "format" ] ->
+        // Format flow (edit/create): never break the agent loop — swallow errors, exit 0.
         try
-            Interpreter.run Logic.hook
+            Interpreter.run Logic.hookFormat
+            0
+        with _ ->
+            0
+    | [ "hook"; "read" ] ->
+        // Read flow (bash/grep/view/powershell): swallow errors, exit 0 like the format flow.
+        try
+            Interpreter.run Logic.hookRead
             0
         with _ ->
             0

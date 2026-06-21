@@ -7,23 +7,25 @@
     </PropertyGroup>
 
     <ItemGroup>
-        <Compile Include="TestHelpers.fs"/>
-        <Compile Include="PayloadTests.fs"/>
-        <Compile Include="DiffAwareTests.fs"/>
-        <Compile Include="SymlinkRegressionTests.fs"/>
-        <Compile Include="HookTests.fs"/>
+        <Compile Include="TestHelpers.fs" />
+        <Compile Include="Recording.fs" />
+        <Compile Include="PayloadTests.fs" />
+        <Compile Include="DiffAwareTests.fs" />
+        <Compile Include="SymlinkRegressionTests.fs" />
+        <Compile Include="HookTests.fs" />
+        <Compile Include="RecordingTests.fs" />
     </ItemGroup>
 
     <ItemGroup>
-        <PackageReference Include="coverlet.collector" Version="6.0.4"/>
-        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1"/>
-        <PackageReference Include="xunit" Version="2.9.3"/>
-        <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4"/>
-        <PackageReference Include="FSharp.Core" Version="10.1.301"/>
+        <PackageReference Include="coverlet.collector" Version="6.0.4" />
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="17.14.1" />
+        <PackageReference Include="xunit" Version="2.9.3" />
+        <PackageReference Include="xunit.runner.visualstudio" Version="3.1.4" />
+        <PackageReference Include="FSharp.Core" Version="10.1.301" />
     </ItemGroup>
 
     <ItemGroup>
-        <ProjectReference Include="..\CSharpLintHook\CSharpLintHook.fsproj"/>
+        <ProjectReference Include="..\CSharpLintHook\CSharpLintHook.fsproj" />
     </ItemGroup>
 
 </Project>

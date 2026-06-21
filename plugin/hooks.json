@@ -13,10 +13,19 @@
     "postToolUse": [
       {
         "type": "command",
+        "matcher": "edit|create",
         "cwd": ".",
-        "bash": "test -f \"${PLUGIN_ROOT}/CSharpLintHook.dll\" && dotnet \"${PLUGIN_ROOT}/CSharpLintHook.dll\" hook || true",
-        "powershell": "if (Test-Path \"${PLUGIN_ROOT}\\CSharpLintHook.dll\") { dotnet \"${PLUGIN_ROOT}\\CSharpLintHook.dll\" hook }; exit 0",
+        "bash": "test -f \"${PLUGIN_ROOT}/CSharpLintHook.dll\" && dotnet \"${PLUGIN_ROOT}/CSharpLintHook.dll\" hook format || true",
+        "powershell": "if (Test-Path \"${PLUGIN_ROOT}\\CSharpLintHook.dll\") { dotnet \"${PLUGIN_ROOT}\\CSharpLintHook.dll\" hook format }; exit 0",
         "timeoutSec": 60
+      },
+      {
+        "type": "command",
+        "matcher": "bash|grep|view|powershell",
+        "cwd": ".",
+        "bash": "test -f \"${PLUGIN_ROOT}/CSharpLintHook.dll\" && dotnet \"${PLUGIN_ROOT}/CSharpLintHook.dll\" hook read || true",
+        "powershell": "if (Test-Path \"${PLUGIN_ROOT}\\CSharpLintHook.dll\") { dotnet \"${PLUGIN_ROOT}\\CSharpLintHook.dll\" hook read }; exit 0",
+        "timeoutSec": 30
       },
       {
         "type": "command",

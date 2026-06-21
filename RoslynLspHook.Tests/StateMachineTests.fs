@@ -33,7 +33,7 @@ let private oneError: Diagnostic list =
         Source = Some "Roslyn" } ]
 
 let private hook (env: StubEnv) =
-    run env (RoslynLspHook.Logic.hook None cfgFor)
+    run env (RoslynLspHook.Logic.hook cfgFor)
 
 // --- sessionStart -----------------------------------------------------------
 

@@ -5,6 +5,7 @@
         <Platform Name="x86"/>
     </Configurations>
     <Folder Name="/plugin/">
+        <File Path="plugin/.mcp.json"/>
         <File Path="plugin/hooks.json"/>
         <File Path="plugin/plugin.json"/>
     </Folder>
@@ -20,4 +21,6 @@
     <Project Path="RoslynLspHook.Tests/RoslynLspHook.Tests.fsproj"/>
     <Project Path="RoslynLspHook/RoslynLspHook.fsproj"/>
     <Project Path="RoslynLsp/RoslynLsp.fsproj"/>
+    <Project Path="RoslynLspMcp.Tests/RoslynLspMcp.Tests.fsproj"/>
+    <Project Path="RoslynLspMcp/RoslynLspMcp.fsproj"/>
 </Solution>

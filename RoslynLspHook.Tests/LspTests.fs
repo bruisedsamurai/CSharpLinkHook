@@ -294,3 +294,60 @@ let ``parseOk reads the ok flag`` () =
     Assert.True(parseOk (brokerOkReply ()))
     Assert.False(parseOk """{"ok":false}""")
     Assert.False(parseOk "not json")
+
+// --- lsp passthrough protocol -----------------------------------------------
+
+[<Fact>]
+let ``lspRequest embeds the method and raw params`` () =
+    use doc = parseDoc (lspRequest 9 "textDocument/definition" """{"position":{"line":1,"character":2}}""")
+    let root = doc.RootElement
+    Assert.Equal("2.0", root.GetProperty("jsonrpc").GetString())
+    Assert.Equal(9, root.GetProperty("id").GetInt32())
+    Assert.Equal("textDocument/definition", root.GetProperty("method").GetString())
+    Assert.Equal(1, root.GetProperty("params").GetProperty("position").GetProperty("line").GetInt32())
+
+[<Fact>]
+let ``parseBrokerCommand round-trips an lsp request`` () =
+    let req = brokerLspRequest "textDocument/hover" """{"a":1}""" [ "C:\\work\\A.cs"; "C:\\work\\B.cs" ]
+
+    match parseBrokerCommand req with
+    | Lsp(method, paramsJson, openPaths) ->
+        Assert.Equal("textDocument/hover", method)
+        Assert.Equal<string list>([ "C:\\work\\A.cs"; "C:\\work\\B.cs" ], openPaths)
+        use doc = parseDoc paramsJson
+        Assert.Equal(1, doc.RootElement.GetProperty("a").GetInt32())
+    | other -> Assert.Fail(sprintf "expected Lsp, got %A" other)
+
+[<Fact>]
+let ``parseBrokerCommand lsp defaults params to an object and open to an empty list`` () =
+    match parseBrokerCommand """{"cmd":"lsp","method":"x"}""" with
+    | Lsp(method, paramsJson, openPaths) ->
+        Assert.Equal("x", method)
+        Assert.Equal("{}", paramsJson)
+        Assert.Empty(openPaths)
+    | other -> Assert.Fail(sprintf "expected Lsp, got %A" other)
+
+[<Fact>]
+let ``parseBrokerCommand returns Unknown for an lsp request without a method`` () =
+    Assert.Equal(Unknown, parseBrokerCommand """{"cmd":"lsp","params":{}}""")
+
+[<Fact>]
+let ``tryLspResult extracts the result payload`` () =
+    match tryLspResult """{"jsonrpc":"2.0","id":1,"result":{"uri":"file:///x"}}""" with
+    | Some r ->
+        use doc = parseDoc r
+        Assert.Equal("file:///x", doc.RootElement.GetProperty("uri").GetString())
+    | None -> Assert.Fail "expected a result"
+
+[<Fact>]
+let ``tryLspResult is None for an error reply, a null result, or junk`` () =
+    Assert.Equal(None, tryLspResult (lspErrorReply "nope"))
+    Assert.Equal(None, tryLspResult """{"jsonrpc":"2.0","id":1,"result":null}""")
+    Assert.Equal(None, tryLspResult """{"jsonrpc":"2.0","id":1}""")
+    Assert.Equal(None, tryLspResult "not json")
+
+[<Fact>]
+let ``tryLspError reads a broker error message`` () =
+    Assert.Equal(Some "workspace is still loading; retry shortly", tryLspError (lspErrorReply "workspace is still loading; retry shortly"))
+    Assert.Equal(None, tryLspError """{"jsonrpc":"2.0","id":1,"result":{}}""")
+    Assert.Equal(None, tryLspError "not json")

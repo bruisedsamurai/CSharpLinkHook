@@ -91,6 +91,11 @@ let runBrokerCancellable (cfg: LspConfig) (externalCt: CancellationToken) : unit
                 let writeLock = new SemaphoreSlim(1, 1)
                 let pending = ConcurrentDictionary<int, TaskCompletionSource<string>>()
                 let publishCache = ConcurrentDictionary<string, Diagnostic list>()
+                // Set once the server reports `workspace/projectInitializationComplete`.
+                // Passthrough (`handleLsp`) only checks this flag — it never blocks: if
+                // the workspace is still loading the request fails fast so the caller can
+                // retry once the warm server has finished loading.
+                let initialized = new ManualResetEventSlim(false)
                 let mutable nextId = 100
                 let allocId () = Interlocked.Increment(&nextId)
 
@@ -153,6 +158,8 @@ let runBrokerCancellable (cfg: LspConfig) (externalCt: CancellationToken) : unit
                                     match diagnosticsFromPublish json with
                                     | Some u, ds -> publishCache[u] <- ds
                                     | None, _ -> ()
+                                | Notification("workspace/projectInitializationComplete", _) ->
+                                    swallow (fun () -> initialized.Set())
                                 | _ -> ()
 
                         swallow (fun () -> lifetime.Cancel())
@@ -213,6 +220,42 @@ let runBrokerCancellable (cfg: LspConfig) (externalCt: CancellationToken) : unit
 
                     brokerOkReply ()
 
+                // Forward an arbitrary LSP request to the warm server. Opens each
+                // `openPaths` file (so Roslyn can answer position-based queries),
+                // issues the request, then closes them. Returns the raw LSP response
+                // JSON on success; the client extracts `result` via `tryLspResult`.
+                let handleLsp (method: string) (paramsJson: string) (openPaths: string list) : string =
+                    if not initialized.IsSet then
+                        // Workspace still loading: fail fast, never block. The caller retries.
+                        lspErrorReply "workspace is still loading; retry shortly"
+                    else
+                        try
+                            let opened =
+                                openPaths
+                                |> List.choose (fun p ->
+                                    try
+                                        let uri = fileUri p
+                                        let text = File.ReadAllText p
+                                        writeChild (didOpenNotification uri text)
+                                        Some uri
+                                    with _ ->
+                                        None)
+
+                            let id = allocId ()
+
+                            let reply =
+                                match request (lspRequest id method paramsJson) id cfg.WaitMs with
+                                | Some json -> json
+                                | None -> lspErrorReply "request timed out"
+
+                            for uri in opened do
+                                writeChild (didCloseNotification uri)
+
+                            reply
+                        with ex ->
+                            logBroker cfg (sprintf "lsp passthrough failed (%s): %s" method ex.Message)
+                            lspErrorReply ex.Message
+
                 if initialize () then
                     logBroker cfg ("hosting pipe " + cfg.PipeName)
 
@@ -245,6 +288,7 @@ let runBrokerCancellable (cfg: LspConfig) (externalCt: CancellationToken) : unit
                                         match parseBrokerCommand reqJson with
                                         | Diag p -> handleDiag p
                                         | Open p -> handleOpen p
+                                        | Lsp(m, p, opens) -> handleLsp m p opens
                                         | Unknown -> serializeDiagnostics []
 
                                     swallow (fun () ->

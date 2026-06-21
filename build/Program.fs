@@ -35,9 +35,11 @@ let publishRoot = "publish"
 let roslynPublish = publishRoot </> "RoslynLspHook"
 let daemonPublish = publishRoot </> "RoslynLsp"
 let csharpPublish = publishRoot </> "CSharpLintHook"
+let mcpPublish = publishRoot </> "RoslynLspMcp"
 let roslynProj = "RoslynLspHook" </> "RoslynLspHook.fsproj"
 let daemonProj = "RoslynLsp" </> "RoslynLsp.fsproj"
 let csharpProj = "CSharpLintHook" </> "CSharpLintHook.fsproj"
+let mcpProj = "RoslynLspMcp" </> "RoslynLspMcp.fsproj"
 let solution = "CSharpLintHook.slnx"
 
 /// Restore the executable bit that File.Copy drops on Unix.
@@ -207,6 +209,25 @@ let initTargets () =
         for f in Directory.GetFiles(csharpPublish, "*.pdb") do
             File.Delete f)
 
+    // RoslynLspMcp (the MCP server) -> framework-dependent, like CSharpLintHook:
+    // the ModelContextProtocol SDK relies on reflection, so it must NOT be AOT.
+    // Invoked via `dotnet RoslynLspMcp.dll`. Its framework-dependent publish also
+    // emits the managed `RoslynLsp.dll` it references (the client library) beside it;
+    // that does not clash with the native `RoslynLsp` daemon shipped by PublishDaemon.
+    Target.create "PublishMcp" (fun _ ->
+        Shell.cleanDir mcpPublish
+
+        mcpProj
+        |> publish (fun o ->
+            { o with
+                OutputPath = Some mcpPublish
+                Common =
+                    { o.Common with
+                        CustomParams = Some "-p:UseAppHost=false -p:SatelliteResourceLanguages=en" } })
+
+        for f in Directory.GetFiles(mcpPublish, "*.pdb") do
+            File.Delete f)
+
     // Assemble the installable plugin folder: manifest + hooks + skill, with the
     // two binaries flattened into the plugin root (where hooks.json resolves them).
     Target.create "Plugin" (fun _ ->
@@ -215,11 +236,13 @@ let initTargets () =
 
         Shell.copyFile (distPlugin </> "plugin.json") (pluginSrc </> "plugin.json")
         Shell.copyFile (distPlugin </> "hooks.json") (pluginSrc </> "hooks.json")
+        Shell.copyFile (distPlugin </> ".mcp.json") (pluginSrc </> ".mcp.json")
         Shell.copyDir (distPlugin </> "skills") (pluginSrc </> "skills") (fun _ -> true)
 
         Shell.copyDir distPlugin roslynPublish (fun _ -> true)
         Shell.copyDir distPlugin daemonPublish (fun _ -> true)
         Shell.copyDir distPlugin csharpPublish (fun _ -> true)
+        Shell.copyDir distPlugin mcpPublish (fun _ -> true)
 
         setExecutable (distPlugin </> "RoslynLspHook")
         setExecutable (distPlugin </> "RoslynLsp")
@@ -240,6 +263,7 @@ let initTargets () =
         Shell.copyDir distPluginVsCode roslynPublish (fun _ -> true)
         Shell.copyDir distPluginVsCode daemonPublish (fun _ -> true)
         Shell.copyDir distPluginVsCode csharpPublish (fun _ -> true)
+        Shell.copyDir distPluginVsCode mcpPublish (fun _ -> true)
 
         setExecutable (distPluginVsCode </> "RoslynLspHook")
         setExecutable (distPluginVsCode </> "RoslynLsp")
@@ -252,6 +276,7 @@ let initTargets () =
     "PublishRoslyn" ==> "Plugin" |> ignore
     "PublishDaemon" ==> "Plugin" |> ignore
     "PublishCSharp" ==> "Plugin" |> ignore
+    "PublishMcp" ==> "Plugin" |> ignore
 
     "Clean" ==> "Default" |> ignore
     "Test" ==> "Default" |> ignore
@@ -262,9 +287,11 @@ let initTargets () =
     "Clean" ?=> "PublishRoslyn" |> ignore
     "Clean" ?=> "PublishDaemon" |> ignore
     "Clean" ?=> "PublishCSharp" |> ignore
+    "Clean" ?=> "PublishMcp" |> ignore
     "Test" ?=> "PublishRoslyn" |> ignore
     "Test" ?=> "PublishDaemon" |> ignore
     "Test" ?=> "PublishCSharp" |> ignore
+    "Test" ?=> "PublishMcp" |> ignore
 
 [<EntryPoint>]
 let main argv =

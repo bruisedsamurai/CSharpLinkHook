@@ -48,6 +48,17 @@ let private jarr (items: JsonNode list) : JsonNode =
 
     a :> JsonNode
 
+/// Parse a raw JSON string into a node so it can be embedded as a value (e.g. an
+/// arbitrary LSP `params` object forwarded through the passthrough). Falls back to
+/// an empty object on null/parse failure so a malformed payload never throws here.
+let private jraw (json: string) : JsonNode =
+    try
+        match JsonNode.Parse json with
+        | null -> jobj []
+        | n -> n
+    with _ ->
+        jobj []
+
 /// The `file://` URI for an absolute filesystem path.
 let fileUri (path: string) : string = Uri(path).AbsoluteUri
 
@@ -84,7 +95,18 @@ let initializeRequest (id: int) (processId: int) (cwd: string) : string =
               jobj
                   [ "synchronization", jobj [ "dynamicRegistration", jbool true; "didSave", jbool true ]
                     "publishDiagnostics", jobj [ "relatedInformation", jbool true ]
-                    "diagnostic", jobj [ "dynamicRegistration", jbool true ] ]
+                    "diagnostic", jobj [ "dynamicRegistration", jbool true ]
+                    // Passthrough navigation needs the rich response shapes: the
+                    // hierarchical DocumentSymbol tree (with Roslyn's `glyph`
+                    // accessibility extension and `selectionRange`), markdown hover,
+                    // location links, and type hierarchy. Roslyn returns the flat
+                    // `SymbolInformation[]` form unless hierarchical support is
+                    // advertised here, so these capabilities are required.
+                    "documentSymbol",
+                    jobj [ "dynamicRegistration", jbool true; "hierarchicalDocumentSymbolSupport", jbool true ]
+                    "hover", jobj [ "dynamicRegistration", jbool true; "contentFormat", jarr [ jstr "markdown"; jstr "plaintext" ] ]
+                    "definition", jobj [ "dynamicRegistration", jbool true; "linkSupport", jbool true ]
+                    "typeHierarchy", jobj [ "dynamicRegistration", jbool true ] ]
               "workspace", jobj [ "configuration", jbool true; "workspaceFolders", jbool true ] ]
 
     let prms =
@@ -123,6 +145,13 @@ let diagnosticRequest (id: int) (uri: string) : string =
           "id", jint id
           "method", jstr "textDocument/diagnostic"
           "params", jobj [ "textDocument", jobj [ "uri", jstr uri ] ] ])
+        .ToJsonString()
+
+/// A generic LSP request that embeds `paramsJson` verbatim as its `params`. The
+/// broker's passthrough handler uses this to forward an arbitrary request (e.g.
+/// `textDocument/definition`, `documentSymbol`, `hover`) to the warm server.
+let lspRequest (id: int) (method: string) (paramsJson: string) : string =
+    (jobj [ "jsonrpc", jstr "2.0"; "id", jint id; "method", jstr method; "params", jraw paramsJson ])
         .ToJsonString()
 
 /// `textDocument/didClose`: tell the server we are done with this document, so a
@@ -377,6 +406,10 @@ type BrokerCommand =
     | Diag of path: string
     /// Scope the warm server to an absolute solution path (.sln/.slnx).
     | Open of path: string
+    /// Forward an arbitrary LSP request to the warm server. `openPaths` are
+    /// absolute `.cs` files the broker must `didOpen` (and later `didClose`)
+    /// around the request so Roslyn can answer position-based queries.
+    | Lsp of method: string * paramsJson: string * openPaths: string list
     /// Unrecognized / malformed request.
     | Unknown
 
@@ -386,17 +419,66 @@ let brokerDiagRequest (path: string) : string =
 let brokerOpenRequest (path: string) : string =
     (jobj [ "cmd", jstr "open"; "path", jstr path ]).ToJsonString()
 
+/// Build the broker's `lsp` passthrough request: a method, its raw `params`
+/// object, and the list of files to open around the call.
+let brokerLspRequest (method: string) (paramsJson: string) (openPaths: string list) : string =
+    (jobj
+        [ "cmd", jstr "lsp"
+          "method", jstr method
+          "params", jraw paramsJson
+          "open", jarr (openPaths |> List.map jstr) ])
+        .ToJsonString()
+
+/// The broker's error reply for a passthrough that could not be completed.
+let lspErrorReply (msg: string) : string =
+    (jobj [ "error", jstr msg ]).ToJsonString()
+
+/// Extract the `result` payload from a raw LSP response as a JSON string.
+/// Returns `None` when the response carries no usable result (absent, JSON
+/// `null`, or an `error` reply) — `prop` already yields `None` for JSON null.
+let tryLspResult (json: string) : string option =
+    match parseObj json with
+    | None -> None
+    | Some o -> prop o "result" |> Option.map (fun n -> n.ToJsonString())
+
+/// Extract a broker `error` message from a reply body, if present. The broker
+/// uses `{"error":"…"}` for passthroughs it could not complete (e.g. the
+/// workspace is still loading, or the request timed out).
+let tryLspError (json: string) : string option =
+    match parseObj json with
+    | None -> None
+    | Some o -> prop o "error" |> Option.bind tryGetString
+
 /// Parse a framed broker request body into a `BrokerCommand`.
 let parseBrokerCommand (json: string) : BrokerCommand =
     match parseObj json with
     | None -> Unknown
     | Some o ->
         let cmd = prop o "cmd" |> Option.bind tryGetString
-        let path = prop o "path" |> Option.bind tryGetString
 
-        match cmd, path with
-        | Some "diag", Some p -> Diag p
-        | Some "open", Some p -> Open p
+        match cmd with
+        | Some "diag" ->
+            (match prop o "path" |> Option.bind tryGetString with
+             | Some p -> Diag p
+             | None -> Unknown)
+        | Some "open" ->
+            (match prop o "path" |> Option.bind tryGetString with
+             | Some p -> Open p
+             | None -> Unknown)
+        | Some "lsp" ->
+            (match prop o "method" |> Option.bind tryGetString with
+             | None -> Unknown
+             | Some method ->
+                 let paramsJson =
+                     prop o "params" |> Option.map (fun n -> n.ToJsonString()) |> Option.defaultValue "{}"
+
+                 let openPaths =
+                     prop o "open"
+                     |> Option.bind asArr
+                     |> Option.map (fun a -> a |> Seq.choose (fun n -> n |> Option.ofObj |> Option.bind tryGetString) |> List.ofSeq)
+                     |> Option.defaultValue []
+
+                 Lsp(method, paramsJson, openPaths))
         | _ -> Unknown
 
 /// Serialize diagnostics for the broker's `diag` reply. Positions stay 0-based

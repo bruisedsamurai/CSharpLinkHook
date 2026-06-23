@@ -1,6 +1,6 @@
 {
   "name": "roslyn-lsp-hook",
-  "description": "C# hooks for GitHub Copilot CLI: diff-aware Roslyn formatting on edits (CSharpLintHook) and Roslyn LSP diagnostics surfaced as additionalContext (RoslynLspHook).",
+  "description": "C# hooks for GitHub Copilot CLI: diff-aware Roslyn formatting, Roslyn LSP diagnostics, and ast-grep outline context for viewed/searched files.",
   "version": "0.1.0",
   "author": {
     "name": "CSharpLintHook"
@@ -13,7 +13,8 @@
     "lsp",
     "formatting",
     "lint",
-    "hooks"
+    "hooks",
+    "ast-grep"
   ],
   "skills": [
     "skills/"

@@ -2,9 +2,8 @@
 [Bb]in/
 [Oo]bj/
 
-# FAKE build artifacts
+# FAKE intermediate artifacts
 publish/
-dist/
 
 # AI tools
 .idea

@@ -59,7 +59,8 @@ dist/roslyn-lsp-hook/
 └── *.dll, *.json               # CSharpLintHook runtime dependencies
 ```
 
-`dist/` (and `publish/`) are git-ignored build output.
+`publish/` is git-ignored intermediate output. `dist/` is committed so the repo
+can act as a Copilot CLI plugin marketplace.
 
 ## VS Code agent-plugin variant
 
@@ -115,7 +116,17 @@ Alternatively, to install from a Git repository rather than a local build, run
 
 ## Install the plugin (Copilot CLI)
 
-Point the Copilot CLI at the produced folder to store it as an installed plugin:
+This repo includes a marketplace named `TokenSaver` at
+`.github/plugin/marketplace.json`. Add it and install the packaged plugin from
+the committed `dist/roslyn-lsp-hook` folder:
+
+```bash
+copilot plugin marketplace add bruisedsamurai/CSharpLinkHook
+copilot plugin install roslyn-lsp-hook@TokenSaver
+```
+
+For local development, point the Copilot CLI at the produced folder to store it
+as an installed plugin:
 
 ```bash
 copilot plugin install ./dist/roslyn-lsp-hook

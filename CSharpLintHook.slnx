@@ -4,6 +4,170 @@
         <Platform Name="x64"/>
         <Platform Name="x86"/>
     </Configurations>
+    <Folder Name="/.github/">
+    </Folder>
+    <Folder Name="/.github/plugin/">
+        <File Path=".github/plugin/marketplace.json"/>
+    </Folder>
+    <Folder Name="/dist/">
+    </Folder>
+    <Folder Name="/dist/roslyn-lsp-hook/">
+        <File Path="dist/roslyn-lsp-hook/.mcp.json"/>
+        <File Path="dist/roslyn-lsp-hook/CSharpLintHook.deps.json"/>
+        <File Path="dist/roslyn-lsp-hook/CSharpLintHook.dll"/>
+        <File Path="dist/roslyn-lsp-hook/CSharpLintHook.runtimeconfig.json"/>
+        <File Path="dist/roslyn-lsp-hook/Fable.Core.dll"/>
+        <File Path="dist/roslyn-lsp-hook/FSharp.Core.dll"/>
+        <File Path="dist/roslyn-lsp-hook/hooks.json"/>
+        <File Path="dist/roslyn-lsp-hook/Humanizer.dll"/>
+        <File Path="dist/roslyn-lsp-hook/Microsoft.CodeAnalysis.CSharp.dll"/>
+        <File Path="dist/roslyn-lsp-hook/Microsoft.CodeAnalysis.CSharp.Workspaces.dll"/>
+        <File Path="dist/roslyn-lsp-hook/Microsoft.CodeAnalysis.dll"/>
+        <File Path="dist/roslyn-lsp-hook/Microsoft.CodeAnalysis.Workspaces.dll"/>
+        <File Path="dist/roslyn-lsp-hook/Microsoft.Extensions.AI.Abstractions.dll"/>
+        <File Path="dist/roslyn-lsp-hook/Microsoft.Extensions.Caching.Abstractions.dll"/>
+        <File Path="dist/roslyn-lsp-hook/Microsoft.Extensions.Configuration.Abstractions.dll"/>
+        <File Path="dist/roslyn-lsp-hook/Microsoft.Extensions.Configuration.Binder.dll"/>
+        <File Path="dist/roslyn-lsp-hook/Microsoft.Extensions.Configuration.CommandLine.dll"/>
+        <File Path="dist/roslyn-lsp-hook/Microsoft.Extensions.Configuration.dll"/>
+        <File Path="dist/roslyn-lsp-hook/Microsoft.Extensions.Configuration.EnvironmentVariables.dll"/>
+        <File Path="dist/roslyn-lsp-hook/Microsoft.Extensions.Configuration.FileExtensions.dll"/>
+        <File Path="dist/roslyn-lsp-hook/Microsoft.Extensions.Configuration.Json.dll"/>
+        <File Path="dist/roslyn-lsp-hook/Microsoft.Extensions.Configuration.UserSecrets.dll"/>
+        <File Path="dist/roslyn-lsp-hook/Microsoft.Extensions.DependencyInjection.Abstractions.dll"/>
+        <File Path="dist/roslyn-lsp-hook/Microsoft.Extensions.DependencyInjection.dll"/>
+        <File Path="dist/roslyn-lsp-hook/Microsoft.Extensions.Diagnostics.Abstractions.dll"/>
+        <File Path="dist/roslyn-lsp-hook/Microsoft.Extensions.Diagnostics.dll"/>
+        <File Path="dist/roslyn-lsp-hook/Microsoft.Extensions.FileProviders.Abstractions.dll"/>
+        <File Path="dist/roslyn-lsp-hook/Microsoft.Extensions.FileProviders.Physical.dll"/>
+        <File Path="dist/roslyn-lsp-hook/Microsoft.Extensions.FileSystemGlobbing.dll"/>
+        <File Path="dist/roslyn-lsp-hook/Microsoft.Extensions.Hosting.Abstractions.dll"/>
+        <File Path="dist/roslyn-lsp-hook/Microsoft.Extensions.Hosting.dll"/>
+        <File Path="dist/roslyn-lsp-hook/Microsoft.Extensions.Logging.Abstractions.dll"/>
+        <File Path="dist/roslyn-lsp-hook/Microsoft.Extensions.Logging.Configuration.dll"/>
+        <File Path="dist/roslyn-lsp-hook/Microsoft.Extensions.Logging.Console.dll"/>
+        <File Path="dist/roslyn-lsp-hook/Microsoft.Extensions.Logging.Debug.dll"/>
+        <File Path="dist/roslyn-lsp-hook/Microsoft.Extensions.Logging.dll"/>
+        <File Path="dist/roslyn-lsp-hook/Microsoft.Extensions.Logging.EventLog.dll"/>
+        <File Path="dist/roslyn-lsp-hook/Microsoft.Extensions.Logging.EventSource.dll"/>
+        <File Path="dist/roslyn-lsp-hook/Microsoft.Extensions.Options.ConfigurationExtensions.dll"/>
+        <File Path="dist/roslyn-lsp-hook/Microsoft.Extensions.Options.dll"/>
+        <File Path="dist/roslyn-lsp-hook/Microsoft.Extensions.Primitives.dll"/>
+        <File Path="dist/roslyn-lsp-hook/ModelContextProtocol.Core.dll"/>
+        <File Path="dist/roslyn-lsp-hook/ModelContextProtocol.dll"/>
+        <File Path="dist/roslyn-lsp-hook/Newtonsoft.Json.dll"/>
+        <File Path="dist/roslyn-lsp-hook/plugin.json"/>
+        <File Path="dist/roslyn-lsp-hook/RoslynLsp.deps.json"/>
+        <File Path="dist/roslyn-lsp-hook/RoslynLsp.dll"/>
+        <File Path="dist/roslyn-lsp-hook/RoslynLsp.exe"/>
+        <File Path="dist/roslyn-lsp-hook/RoslynLsp.runtimeconfig.json"/>
+        <File Path="dist/roslyn-lsp-hook/RoslynLspHook.exe"/>
+        <File Path="dist/roslyn-lsp-hook/RoslynLspMcp.deps.json"/>
+        <File Path="dist/roslyn-lsp-hook/RoslynLspMcp.dll"/>
+        <File Path="dist/roslyn-lsp-hook/RoslynLspMcp.runtimeconfig.json"/>
+        <File Path="dist/roslyn-lsp-hook/System.Composition.AttributedModel.dll"/>
+        <File Path="dist/roslyn-lsp-hook/System.Composition.Convention.dll"/>
+        <File Path="dist/roslyn-lsp-hook/System.Composition.Hosting.dll"/>
+        <File Path="dist/roslyn-lsp-hook/System.Composition.Runtime.dll"/>
+        <File Path="dist/roslyn-lsp-hook/System.Composition.TypedParts.dll"/>
+        <File Path="dist/roslyn-lsp-hook/System.Diagnostics.EventLog.dll"/>
+        <File Path="dist/roslyn-lsp-hook/Thoth.Json.Net.dll"/>
+    </Folder>
+    <Folder Name="/dist/roslyn-lsp-hook-vscode/">
+        <File Path="dist/roslyn-lsp-hook-vscode/CSharpLintHook.deps.json"/>
+        <File Path="dist/roslyn-lsp-hook-vscode/CSharpLintHook.dll"/>
+        <File Path="dist/roslyn-lsp-hook-vscode/CSharpLintHook.runtimeconfig.json"/>
+        <File Path="dist/roslyn-lsp-hook-vscode/Fable.Core.dll"/>
+        <File Path="dist/roslyn-lsp-hook-vscode/FSharp.Core.dll"/>
+        <File Path="dist/roslyn-lsp-hook-vscode/Humanizer.dll"/>
+        <File Path="dist/roslyn-lsp-hook-vscode/Microsoft.CodeAnalysis.CSharp.dll"/>
+        <File Path="dist/roslyn-lsp-hook-vscode/Microsoft.CodeAnalysis.CSharp.Workspaces.dll"/>
+        <File Path="dist/roslyn-lsp-hook-vscode/Microsoft.CodeAnalysis.dll"/>
+        <File Path="dist/roslyn-lsp-hook-vscode/Microsoft.CodeAnalysis.Workspaces.dll"/>
+        <File Path="dist/roslyn-lsp-hook-vscode/Microsoft.Extensions.AI.Abstractions.dll"/>
+        <File Path="dist/roslyn-lsp-hook-vscode/Microsoft.Extensions.Caching.Abstractions.dll"/>
+        <File Path="dist/roslyn-lsp-hook-vscode/Microsoft.Extensions.Configuration.Abstractions.dll"/>
+        <File Path="dist/roslyn-lsp-hook-vscode/Microsoft.Extensions.Configuration.Binder.dll"/>
+        <File Path="dist/roslyn-lsp-hook-vscode/Microsoft.Extensions.Configuration.CommandLine.dll"/>
+        <File Path="dist/roslyn-lsp-hook-vscode/Microsoft.Extensions.Configuration.dll"/>
+        <File Path="dist/roslyn-lsp-hook-vscode/Microsoft.Extensions.Configuration.EnvironmentVariables.dll"/>
+        <File Path="dist/roslyn-lsp-hook-vscode/Microsoft.Extensions.Configuration.FileExtensions.dll"/>
+        <File Path="dist/roslyn-lsp-hook-vscode/Microsoft.Extensions.Configuration.Json.dll"/>
+        <File Path="dist/roslyn-lsp-hook-vscode/Microsoft.Extensions.Configuration.UserSecrets.dll"/>
+        <File Path="dist/roslyn-lsp-hook-vscode/Microsoft.Extensions.DependencyInjection.Abstractions.dll"/>
+        <File Path="dist/roslyn-lsp-hook-vscode/Microsoft.Extensions.DependencyInjection.dll"/>
+        <File Path="dist/roslyn-lsp-hook-vscode/Microsoft.Extensions.Diagnostics.Abstractions.dll"/>
+        <File Path="dist/roslyn-lsp-hook-vscode/Microsoft.Extensions.Diagnostics.dll"/>
+        <File Path="dist/roslyn-lsp-hook-vscode/Microsoft.Extensions.FileProviders.Abstractions.dll"/>
+        <File Path="dist/roslyn-lsp-hook-vscode/Microsoft.Extensions.FileProviders.Physical.dll"/>
+        <File Path="dist/roslyn-lsp-hook-vscode/Microsoft.Extensions.FileSystemGlobbing.dll"/>
+        <File Path="dist/roslyn-lsp-hook-vscode/Microsoft.Extensions.Hosting.Abstractions.dll"/>
+        <File Path="dist/roslyn-lsp-hook-vscode/Microsoft.Extensions.Hosting.dll"/>
+        <File Path="dist/roslyn-lsp-hook-vscode/Microsoft.Extensions.Logging.Abstractions.dll"/>
+        <File Path="dist/roslyn-lsp-hook-vscode/Microsoft.Extensions.Logging.Configuration.dll"/>
+        <File Path="dist/roslyn-lsp-hook-vscode/Microsoft.Extensions.Logging.Console.dll"/>
+        <File Path="dist/roslyn-lsp-hook-vscode/Microsoft.Extensions.Logging.Debug.dll"/>
+        <File Path="dist/roslyn-lsp-hook-vscode/Microsoft.Extensions.Logging.dll"/>
+        <File Path="dist/roslyn-lsp-hook-vscode/Microsoft.Extensions.Logging.EventLog.dll"/>
+        <File Path="dist/roslyn-lsp-hook-vscode/Microsoft.Extensions.Logging.EventSource.dll"/>
+        <File Path="dist/roslyn-lsp-hook-vscode/Microsoft.Extensions.Options.ConfigurationExtensions.dll"/>
+        <File Path="dist/roslyn-lsp-hook-vscode/Microsoft.Extensions.Options.dll"/>
+        <File Path="dist/roslyn-lsp-hook-vscode/Microsoft.Extensions.Primitives.dll"/>
+        <File Path="dist/roslyn-lsp-hook-vscode/ModelContextProtocol.Core.dll"/>
+        <File Path="dist/roslyn-lsp-hook-vscode/ModelContextProtocol.dll"/>
+        <File Path="dist/roslyn-lsp-hook-vscode/Newtonsoft.Json.dll"/>
+        <File Path="dist/roslyn-lsp-hook-vscode/RoslynLsp.deps.json"/>
+        <File Path="dist/roslyn-lsp-hook-vscode/RoslynLsp.dll"/>
+        <File Path="dist/roslyn-lsp-hook-vscode/RoslynLsp.exe"/>
+        <File Path="dist/roslyn-lsp-hook-vscode/RoslynLsp.runtimeconfig.json"/>
+        <File Path="dist/roslyn-lsp-hook-vscode/RoslynLspHook.exe"/>
+        <File Path="dist/roslyn-lsp-hook-vscode/RoslynLspMcp.deps.json"/>
+        <File Path="dist/roslyn-lsp-hook-vscode/RoslynLspMcp.dll"/>
+        <File Path="dist/roslyn-lsp-hook-vscode/RoslynLspMcp.runtimeconfig.json"/>
+        <File Path="dist/roslyn-lsp-hook-vscode/System.Composition.AttributedModel.dll"/>
+        <File Path="dist/roslyn-lsp-hook-vscode/System.Composition.Convention.dll"/>
+        <File Path="dist/roslyn-lsp-hook-vscode/System.Composition.Hosting.dll"/>
+        <File Path="dist/roslyn-lsp-hook-vscode/System.Composition.Runtime.dll"/>
+        <File Path="dist/roslyn-lsp-hook-vscode/System.Composition.TypedParts.dll"/>
+        <File Path="dist/roslyn-lsp-hook-vscode/System.Diagnostics.EventLog.dll"/>
+        <File Path="dist/roslyn-lsp-hook-vscode/Thoth.Json.Net.dll"/>
+    </Folder>
+    <Folder Name="/dist/roslyn-lsp-hook/runtimes/">
+    </Folder>
+    <Folder Name="/dist/roslyn-lsp-hook/skills/">
+    </Folder>
+    <Folder Name="/dist/roslyn-lsp-hook/runtimes/win/">
+    </Folder>
+    <Folder Name="/dist/roslyn-lsp-hook/runtimes/win/lib/">
+    </Folder>
+    <Folder Name="/dist/roslyn-lsp-hook/runtimes/win/lib/net10.0/">
+        <File Path="dist/roslyn-lsp-hook/runtimes/win/lib/net10.0/System.Diagnostics.EventLog.dll"/>
+        <File Path="dist/roslyn-lsp-hook/runtimes/win/lib/net10.0/System.Diagnostics.EventLog.Messages.dll"/>
+    </Folder>
+    <Folder Name="/dist/roslyn-lsp-hook/skills/roslyn-start/">
+        <File Path="dist/roslyn-lsp-hook/skills/roslyn-start/SKILL.md"/>
+    </Folder>
+    <Folder Name="/dist/roslyn-lsp-hook-vscode/.claude-plugin/">
+        <File Path="dist/roslyn-lsp-hook-vscode/.claude-plugin/plugin.json"/>
+    </Folder>
+    <Folder Name="/dist/roslyn-lsp-hook-vscode/hooks/">
+        <File Path="dist/roslyn-lsp-hook-vscode/hooks/hooks.json"/>
+    </Folder>
+    <Folder Name="/dist/roslyn-lsp-hook-vscode/runtimes/">
+    </Folder>
+    <Folder Name="/dist/roslyn-lsp-hook-vscode/skills/">
+    </Folder>
+    <Folder Name="/dist/roslyn-lsp-hook-vscode/runtimes/win/">
+    </Folder>
+    <Folder Name="/dist/roslyn-lsp-hook-vscode/runtimes/win/lib/">
+    </Folder>
+    <Folder Name="/dist/roslyn-lsp-hook-vscode/runtimes/win/lib/net10.0/">
+        <File Path="dist/roslyn-lsp-hook-vscode/runtimes/win/lib/net10.0/System.Diagnostics.EventLog.dll"/>
+        <File Path="dist/roslyn-lsp-hook-vscode/runtimes/win/lib/net10.0/System.Diagnostics.EventLog.Messages.dll"/>
+    </Folder>
+    <Folder Name="/dist/roslyn-lsp-hook-vscode/skills/roslyn-start/">
+        <File Path="dist/roslyn-lsp-hook-vscode/skills/roslyn-start/SKILL.md"/>
+    </Folder>
     <Folder Name="/plugin/">
         <File Path="plugin/.mcp.json"/>
         <File Path="plugin/hooks.json"/>

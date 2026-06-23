@@ -1,0 +1,41 @@
+{
+  "runtimeTarget": {
+    "name": ".NETCoreApp,Version=v10.0",
+    "signature": ""
+  },
+  "compilationOptions": {},
+  "targets": {
+    ".NETCoreApp,Version=v10.0": {
+      "RoslynLsp/1.0.0": {
+        "dependencies": {
+          "FSharp.Core": "10.1.301"
+        },
+        "runtime": {
+          "RoslynLsp.dll": {}
+        }
+      },
+      "FSharp.Core/10.1.301": {
+        "runtime": {
+          "lib/netstandard2.1/FSharp.Core.dll": {
+            "assemblyVersion": "10.1.0.0",
+            "fileVersion": "10.103.126.27133"
+          }
+        }
+      }
+    }
+  },
+  "libraries": {
+    "RoslynLsp/1.0.0": {
+      "type": "project",
+      "serviceable": false,
+      "sha512": ""
+    },
+    "FSharp.Core/10.1.301": {
+      "type": "package",
+      "serviceable": true,
+      "sha512": "sha512-excLf2zM/qUB3WhRUfI0xvOOaPwcRAEdYT/BXe9eiTKySnWVuIKMQTf5+6ETy5nsb1dpLp1s2j2yAM/XcRgFMg==",
+      "path": "fsharp.core/10.1.301",
+      "hashPath": "fsharp.core.10.1.301.nupkg.sha512"
+    }
+  }
+}

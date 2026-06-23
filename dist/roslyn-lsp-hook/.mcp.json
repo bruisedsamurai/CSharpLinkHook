@@ -1,0 +1,10 @@
+{
+  "mcpServers": {
+    "roslyn-lsp-mcp": {
+      "type": "local",
+      "command": "dotnet",
+      "args": ["${PLUGIN_ROOT}/RoslynLspMcp.dll"],
+      "tools": ["*"]
+    }
+  }
+}

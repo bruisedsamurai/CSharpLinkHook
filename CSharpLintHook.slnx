@@ -181,6 +181,7 @@
         <File Path="README.md"/>
     </Folder>
     <Project Path="CSharpLintHook.Tests/CSharpLintHook.Tests.fsproj"/>
+    <Project Path="AstGrepOutline/AstGrepOutline.fsproj"/>
     <Project Path="CSharpLintHook/CSharpLintHook.fsproj"/>
     <Project Path="RoslynLspHook.Tests/RoslynLspHook.Tests.fsproj"/>
     <Project Path="RoslynLspHook/RoslynLspHook.fsproj"/>

@@ -1,18 +1,22 @@
 # roslyn-lsp-hook
 
-A **GitHub Copilot CLI plugin** that wires two C# hooks into your agent sessions:
+A **GitHub Copilot CLI plugin** that wires C# and structural-code hooks into your agent sessions:
 
 - **CSharpLintHook** — diff-aware Roslyn formatting that tidies only the regions
   of a file the agent just edited. See [`CSharpLintHook/README.md`](CSharpLintHook/README.md).
 - **RoslynLspHook** — surfaces C# compiler diagnostics for edited files by
   appending them to the tool result (`modifiedResult`). See [`RoslynLspHook/README.md`](RoslynLspHook/README.md).
+- **ast-grep outline hook** — appends `ast-grep outline <path>` context when the
+  agent reads or searches a file or folder.
 
-The build packages both tools, the hook wiring, and the `roslyn-start` skill into
-a single installable plugin folder.
+The build packages these tools, the hook wiring, and the `roslyn-start` /
+`ast-grep` skills into a single installable plugin folder.
 
 ## Prerequisites
 
 - **.NET 10 SDK** (pinned in [`global.json`](global.json)).
+- **Rust cargo + cargo-binstall** for the `Plugin` target's
+  `cargo binstall ast-grep` step.
 - **GitHub Copilot CLI** (`copilot`) to install and run the plugin.
 
 ## Build the plugin folder
@@ -53,8 +57,11 @@ dist/roslyn-lsp-hook/
 ├── plugin.json                 # manifest
 ├── hooks.json                  # sessionStart + postToolUse wiring
 ├── skills/
-│   └── roslyn-start/SKILL.md   # starts the Roslyn language server
+│   ├── roslyn-start/SKILL.md   # starts the Roslyn language server
+│   └── ast-grep/               # fetched from ast-grep/agent-skill
 ├── RoslynLspHook               # native AOT client binary
+├── AstGrepOutline              # native AOT postToolUse outline hook
+├── ast-grep                    # bundled ast-grep binary
 ├── CSharpLintHook.dll          # framework-dependent formatter (run via dotnet)
 └── *.dll, *.json               # CSharpLintHook runtime dependencies
 ```
@@ -73,8 +80,11 @@ dist/roslyn-lsp-hook-vscode/
 ├── hooks/
 │   └── hooks.json              # PascalCase events, single `command`, ${CLAUDE_PLUGIN_ROOT}
 ├── skills/
-│   └── roslyn-start/SKILL.md
+│   ├── roslyn-start/SKILL.md
+│   └── ast-grep/
 ├── RoslynLspHook               # same binaries as the CLI folder
+├── AstGrepOutline
+├── ast-grep
 └── CSharpLintHook.dll, *.dll
 ```
 
@@ -161,7 +171,7 @@ copilot plugin uninstall roslyn-lsp-hook
   to it. Progress is written to `%TEMP%/roslyn-lsp-<pipe>-setup.log`
   (`/tmp` on Unix). For a workspace with **several** solutions, run the
   `roslyn-start` skill to pick one.
-- **`postToolUse`** wires three entries. `CSharpLintHook hook format` (matched to
+- **`postToolUse`** wires four entries. `CSharpLintHook hook format` (matched to
   `edit|create`) reformats the changed regions of the edited C# file in place.
   `CSharpLintHook hook read` (matched to `bash|grep|view|powershell`) appends a line
   (`additionalContext`) naming the RoslynLspMcp MCP methods —
@@ -169,7 +179,9 @@ copilot plugin uninstall roslyn-lsp-hook
   `get_namespace_declarations` — whenever one of those tools touched a `*.cs` file,
   so the model knows it can use them to learn more about C# symbols. The methods are
   named directly because the MCP server can be registered under any name in a user's
-  config. `RoslynLspHook` then reports any compiler diagnostics for edited C# back to
+  config. The ast-grep outline hook (matched to `grep|view`) runs
+  `ast-grep outline <path>` for file targets and folder targets, then appends the
+  outline as `additionalContext`. `RoslynLspHook` then reports any compiler diagnostics for edited C# back to
   the agent by appending them to the tool result (`modifiedResult`). One binary picks
   the flow from its argument (`hook format` vs `hook read`); the matcher keeps each
   flow scoped to the right tools, so reading a `.cs` file never reformats it.
@@ -183,7 +195,8 @@ copilot plugin uninstall roslyn-lsp-hook
 > emits `additionalContext`; its reformatting is a file side effect that works
 > regardless, so only its informational note is dropped. The read flow is *only* an
 > `additionalContext` note, so until the CLI honours it that flow has no visible
-> effect — a minor follow-up.)
+> effect — a minor follow-up. The ast-grep outline hook also returns
+> `additionalContext`, so it is subject to the same CLI behavior.)
 
 The language server itself is the `roslyn-language-server` .NET global tool; the
 `roslyn-start` skill installs it on demand with:

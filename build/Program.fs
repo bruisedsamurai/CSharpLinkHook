@@ -48,7 +48,6 @@ let roslynPublish = publishRoot </> "RoslynLspHook"
 let daemonPublish = publishRoot </> "RoslynLsp"
 let csharpPublish = publishRoot </> "CSharpLintHook"
 let mcpPublish = publishRoot </> "RoslynLspMcp"
-let astGrepPublish = publishRoot </> "ast-grep"
 let astGrepOutlinePublish = publishRoot </> "AstGrepOutline"
 let roslynProj = "RoslynLspHook" </> "RoslynLspHook.fsproj"
 let daemonProj = "RoslynLsp" </> "RoslynLsp.fsproj"
@@ -60,7 +59,6 @@ let astGrepSkillRepo = "https://github.com/ast-grep/agent-skill.git"
 let astGrepSkillRepoDir = publishRoot </> "ast-grep-agent-skill"
 let astGrepSkillRepoPath = "ast-grep" </> "skills" </> "ast-grep"
 let astGrepSkillPlugin = pluginSrc </> "skills" </> "ast-grep"
-let astGrepBinaryName = if isWindows then "ast-grep.exe" else "ast-grep"
 
 /// Restore the executable bit that File.Copy drops on Unix.
 let private setExecutable (path: string) =
@@ -87,14 +85,6 @@ let private runRaw command args =
     |> CreateProcess.ensureExitCode
     |> Proc.run
     |> ignore
-
-let private cargoBinPath () =
-    let cargoHome =
-        match Environment.environVarOrNone "CARGO_HOME" with
-        | Some path when not (String.IsNullOrWhiteSpace path) -> path
-        | _ -> Environment.GetFolderPath(Environment.SpecialFolder.UserProfile) </> ".cargo"
-
-    cargoHome </> "bin" </> astGrepBinaryName
 
 // ---------------------------------------------------------------------------
 // VS Code agent-plugin variant. VS Code loads plugin hooks in Claude Code
@@ -188,8 +178,6 @@ let private copyCliPluginScaffold () =
     Shell.rm_rf (distPlugin </> "skills")
     Shell.rm_rf (distPlugin </> "scripts")
     Shell.copyDir (distPlugin </> "skills") (pluginSrc </> "skills") (fun _ -> true)
-    Shell.copyFile (distPlugin </> astGrepBinaryName) (astGrepPublish </> astGrepBinaryName)
-    setExecutable (distPlugin </> astGrepBinaryName)
 
 let private copyVsCodePluginScaffold () =
     Directory.ensure distPluginVsCode
@@ -201,8 +189,6 @@ let private copyVsCodePluginScaffold () =
     Shell.rm_rf (distPluginVsCode </> "skills")
     Shell.rm_rf (distPluginVsCode </> "scripts")
     Shell.copyDir (distPluginVsCode </> "skills") (pluginSrc </> "skills") (fun _ -> true)
-    Shell.copyFile (distPluginVsCode </> astGrepBinaryName) (astGrepPublish </> astGrepBinaryName)
-    setExecutable (distPluginVsCode </> astGrepBinaryName)
 
 let initTargets () =
     Target.create "Clean" (fun _ -> Shell.cleanDirs [ distRoot; publishRoot ])
@@ -288,8 +274,9 @@ let initTargets () =
             File.Delete f)
 
     // AstGrepOutline -> Native AOT single binary (PublishAot is set in its fsproj).
-    // The postToolUse `grep|view` hook runs this binary, which shells out to the
-    // bundled `ast-grep` to outline the files/folders the tool just touched.
+    // The postToolUse `grep|view` hook runs this binary, which ensures `@ast-grep/cli`
+    // is installed globally via `npm i -g` and then shells out to `ast-grep` to outline
+    // the files/folders the tool just touched.
     Target.create "PublishAstGrepOutline" (fun _ ->
         Shell.cleanDir astGrepOutlinePublish
 
@@ -314,19 +301,6 @@ let initTargets () =
         runRaw "git" [ "clone"; "--depth"; "1"; astGrepSkillRepo; astGrepSkillRepoDir ]
         Shell.copyDir astGrepSkillPlugin (astGrepSkillRepoDir </> astGrepSkillRepoPath) (fun _ -> true)
         Shell.rm_rf astGrepSkillRepoDir)
-
-    Target.create "InstallAstGrep" (fun _ ->
-        Shell.cleanDir astGrepPublish
-
-        runRaw "cargo" [ "binstall"; "ast-grep" ]
-
-        let installed = cargoBinPath ()
-
-        if not (File.Exists installed) then
-            failwithf "ast-grep binary not found at %s after `cargo binstall ast-grep`" installed
-
-        Shell.copyFile (astGrepPublish </> astGrepBinaryName) installed
-        setExecutable (astGrepPublish </> astGrepBinaryName))
 
     // Assemble the installable plugin folder: manifest + hooks + skill, with the
     // two binaries flattened into the plugin root (where hooks.json resolves them).
@@ -373,7 +347,6 @@ let initTargets () =
     "PublishMcp" ==> "Plugin" |> ignore
     "PublishAstGrepOutline" ==> "Plugin" |> ignore
     "FetchAstGrepSkill" ==> "Plugin" |> ignore
-    "InstallAstGrep" ==> "Plugin" |> ignore
 
     "Clean" ==> "Default" |> ignore
     "Test" ==> "Default" |> ignore
@@ -387,14 +360,12 @@ let initTargets () =
     "Clean" ?=> "PublishMcp" |> ignore
     "Clean" ?=> "PublishAstGrepOutline" |> ignore
     "Clean" ?=> "FetchAstGrepSkill" |> ignore
-    "Clean" ?=> "InstallAstGrep" |> ignore
     "Test" ?=> "PublishRoslyn" |> ignore
     "Test" ?=> "PublishDaemon" |> ignore
     "Test" ?=> "PublishCSharp" |> ignore
     "Test" ?=> "PublishMcp" |> ignore
     "Test" ?=> "PublishAstGrepOutline" |> ignore
     "Test" ?=> "FetchAstGrepSkill" |> ignore
-    "Test" ?=> "InstallAstGrep" |> ignore
 
 [<EntryPoint>]
 let main argv =

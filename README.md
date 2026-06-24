@@ -15,8 +15,8 @@ The build packages these tools, the hook wiring, and the `roslyn-start` /
 ## Prerequisites
 
 - **.NET 10 SDK** (pinned in [`global.json`](global.json)).
-- **Rust cargo + cargo-binstall** for the `Plugin` target's
-  `cargo binstall ast-grep` step.
+- **Node.js + npm** at runtime — the ast-grep outline hook installs/updates
+  `@ast-grep/cli` globally (`npm i -g @ast-grep/cli`) each time it runs.
 - **GitHub Copilot CLI** (`copilot`) to install and run the plugin.
 
 ## Build the plugin folder
@@ -61,7 +61,6 @@ dist/roslyn-lsp-hook/
 │   └── ast-grep/               # fetched from ast-grep/agent-skill
 ├── RoslynLspHook               # native AOT client binary
 ├── AstGrepOutline              # native AOT postToolUse outline hook
-├── ast-grep                    # bundled ast-grep binary
 ├── CSharpLintHook.dll          # framework-dependent formatter (run via dotnet)
 └── *.dll, *.json               # CSharpLintHook runtime dependencies
 ```
@@ -84,7 +83,6 @@ dist/roslyn-lsp-hook-vscode/
 │   └── ast-grep/
 ├── RoslynLspHook               # same binaries as the CLI folder
 ├── AstGrepOutline
-├── ast-grep
 └── CSharpLintHook.dll, *.dll
 ```
 
@@ -179,8 +177,9 @@ copilot plugin uninstall roslyn-lsp-hook
   `get_namespace_declarations` — whenever one of those tools touched a `*.cs` file,
   so the model knows it can use them to learn more about C# symbols. The methods are
   named directly because the MCP server can be registered under any name in a user's
-  config. The ast-grep outline hook (matched to `grep|view`) runs
-  `ast-grep outline <path>` for file targets and folder targets, then appends the
+  config. The ast-grep outline hook (matched to `grep|view`) installs/updates
+  `@ast-grep/cli` via `npm i -g`, then runs `ast-grep outline <path>` for file targets
+  and folder targets, then appends the
   outline as `additionalContext`. `RoslynLspHook` then reports any compiler diagnostics for edited C# back to
   the agent by appending them to the tool result (`modifiedResult`). One binary picks
   the flow from its argument (`hook format` vs `hook read`); the matcher keeps each

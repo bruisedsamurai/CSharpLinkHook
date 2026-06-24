@@ -7,20 +7,76 @@ open System.IO
 open System.Runtime.InteropServices
 
 // AOT-published postToolUse hook. It reads the hook payload from stdin, and when a
-// `view`/`grep` tool has just succeeded against existing files/folders, runs
-// `ast-grep outline <target>` for each (capped, deduped) target and emits the combined
-// outline back as `additionalContext` JSON on stdout. It is a direct port of the
-// former `plugin/scripts/ast_grep_outline.py`, so all the behavioural rules — which
-// tools qualify, path extraction, resolution, dedupe, the 5-target cap, the 10s
-// per-target timeout, and the context size cap — live in `Payload` and mirror it
-// exactly. Like every hook it must never break the agent loop: all failures are
-// swallowed and it exits 0 with no output.
+// `view`/`grep` tool has just succeeded against existing files/folders, ensures
+// `@ast-grep/cli` is installed/updated globally via `npm i -g` (so each run picks up
+// the latest release), then runs `ast-grep outline <target>` for each (capped,
+// deduped) target and emits the combined outline back as `additionalContext` JSON on
+// stdout. Apart from the npm install step it mirrors the former
+// `plugin/scripts/ast_grep_outline.py`, so all the behavioural rules — which tools
+// qualify, path extraction, resolution, dedupe, the 5-target cap, the 10s per-target
+// timeout, and the context size cap — live in `Payload` and mirror it exactly. Like
+// every hook it must never break the agent loop: all failures are swallowed and it
+// exits 0 with no output.
 
-let private exeName =
-    if RuntimeInformation.IsOSPlatform OSPlatform.Windows then
-        "ast-grep.exe"
-    else
-        "ast-grep"
+let private isWindows = RuntimeInformation.IsOSPlatform OSPlatform.Windows
+
+let private exeName = if isWindows then "ast-grep.exe" else "ast-grep"
+
+/// Build a redirected `ProcessStartInfo` for `npm <args>`. npm ships as `npm.cmd` on
+/// Windows, which `CreateProcess` can't launch directly, so it is routed through
+/// `cmd.exe /c`; on Unix npm is a normal executable resolved from PATH.
+let private npmStartInfo (args: string list) : ProcessStartInfo =
+    let psi =
+        if isWindows then
+            let p = ProcessStartInfo "cmd.exe"
+            p.ArgumentList.Add "/c"
+            p.ArgumentList.Add "npm"
+            p
+        else
+            ProcessStartInfo "npm"
+
+    for a in args do
+        psi.ArgumentList.Add a
+
+    psi.UseShellExecute <- false
+    psi.RedirectStandardOutput <- true
+    psi.RedirectStandardError <- true
+    psi.CreateNoWindow <- true
+    psi
+
+/// Install or update `@ast-grep/cli` globally so each run uses the latest release.
+/// Best-effort: a missing npm, no network, or a slow install is swallowed and we fall
+/// back to whatever ast-grep is already resolvable.
+let private ensureAstGrepInstalled () : unit =
+    try
+        let args = [ "install"; "--global"; "@ast-grep/cli" ]
+        use p = new Process(StartInfo = npmStartInfo args)
+        p.Start() |> ignore
+        p.StandardOutput.ReadToEndAsync() |> ignore
+        p.StandardError.ReadToEndAsync() |> ignore
+
+        if not (p.WaitForExit 25000) then
+            (try p.Kill true with _ -> ())
+    with _ ->
+        ()
+
+/// Query npm for its global `node_modules` directory (`npm root -g`).
+let private npmGlobalRoot () : string option =
+    try
+        let args = [ "root"; "--global" ]
+        use p = new Process(StartInfo = npmStartInfo args)
+        p.Start() |> ignore
+        let outTask = p.StandardOutput.ReadToEndAsync()
+        p.StandardError.ReadToEndAsync() |> ignore
+
+        if p.WaitForExit 10000 && p.ExitCode = 0 then
+            let root = outTask.Result.Trim()
+            if root.Length > 0 then Some root else None
+        else
+            (try p.Kill true with _ -> ())
+            None
+    with _ ->
+        None
 
 /// Search PATH for the ast-grep executable, mirroring `shutil.which`.
 let private whichAstGrep () : string option =
@@ -35,11 +91,19 @@ let private whichAstGrep () : string option =
                 let candidate = Path.Combine(dir, exeName)
                 if File.Exists candidate then Some candidate else None)
 
-/// Prefer the binary bundled beside this executable (the plugin root for the
-/// single-file AOT build), otherwise fall back to PATH.
+/// Resolve the ast-grep binary, preferring the npm global install kept current by
+/// `ensureAstGrepInstalled` and falling back to PATH. npm drops the native binary
+/// inside the `@ast-grep/cli` package dir; on Windows only a `.cmd` shim lands on
+/// PATH, so the package-dir lookup is what finds the real `.exe` there.
 let private resolveBinary () : string option =
-    let bundled = Path.Combine(AppContext.BaseDirectory, exeName)
-    if File.Exists bundled then Some bundled else whichAstGrep ()
+    let fromNpm =
+        npmGlobalRoot ()
+        |> Option.map (fun root -> Path.Combine(root, "@ast-grep", "cli", exeName))
+        |> Option.filter File.Exists
+
+    match fromNpm with
+    | Some _ -> fromNpm
+    | None -> whichAstGrep ()
 
 let private targetExists (path: string) : bool =
     File.Exists path || Directory.Exists path
@@ -110,6 +174,8 @@ let private run (input: string) : string option =
             if List.isEmpty targets then
                 None
             else
+                ensureAstGrepInstalled ()
+
                 match resolveBinary () with
                 | None -> None
                 | Some binary ->

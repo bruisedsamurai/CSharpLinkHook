@@ -200,11 +200,9 @@ let ``read flow emits additionalContext naming the RoslynLspMcp methods for a .c
     Assert.Contains("symbols", stdout)
 
 [<Fact>]
-let ``read flow emits additionalContext naming the RoslynLspMcp methods for a .fs file`` () =
+let ``read flow is a no-op for an .fs file (F# is not Roslyn-formattable)`` () =
     let stdout = runReadHook (readToolPayload "/tmp" "success" "Script.fs")
-
-    Assert.Contains("\"additionalContext\"", stdout)
-    Assert.Contains("get_class_methods", stdout)
+    Assert.Equal("", stdout)
 
 [<Fact>]
 let ``read flow is a no-op when the tool did not touch a supported source file`` () =

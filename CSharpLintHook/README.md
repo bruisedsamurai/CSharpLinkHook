@@ -121,8 +121,8 @@ one shape, and `Payload.PostToolUse.decode` (Thoth.Json.Net) accepts all of them
 
 The file path is taken from the first matching key of `path`, `file_path`,
 `filePath`, `filename`, `file`, or `target_file`. The hook only acts when the
-tool result was a success and the path is a real C# or F# source file (`.cs`,
-`.csx`, `.fs`, `.fsi`, or `.fsx`; not generated, not under `bin/`/`obj/`).
+tool result was a success and the path is a real C# source file (`.cs` or
+`.csx`; not generated, not under `bin/`/`obj/`).
 
 > A discovery helper, `.github/hooks/capture_post_tool_use.py`, remains in the
 > repo. It logs raw payloads (re-register it in `postToolUse.json` via

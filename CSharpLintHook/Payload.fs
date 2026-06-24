@@ -116,11 +116,11 @@ let resolvePath (cwd: string) (rawPath: string) : string =
     else
         Path.GetFullPath(Path.Combine(cwd, rawPath))
 
-/// A C# or F# source file we should act on: supported extension, not generated,
+/// A C# source file we should act on: supported extension, not generated,
 /// not under bin/obj.
 let isFormattableCSharp (fullPath: string) : bool =
     let hasSupportedExtension =
-        [ ".cs"; ".csx"; ".fs"; ".fsi"; ".fsx" ]
+        [ ".cs"; ".csx" ]
         |> List.exists (fun extension -> fullPath.EndsWith(extension, StringComparison.OrdinalIgnoreCase))
 
     let isGenerated =
@@ -128,11 +128,7 @@ let isFormattableCSharp (fullPath: string) : bool =
           ".g.i.cs"
           ".designer.cs"
           ".generated.cs"
-          ".feature.cs"
-          ".g.fs"
-          ".g.i.fs"
-          ".designer.fs"
-          ".generated.fs" ]
+          ".feature.cs" ]
         |> List.exists (fun suffix -> fullPath.EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
 
     let inBuildDir =
@@ -142,10 +138,10 @@ let isFormattableCSharp (fullPath: string) : bool =
     hasSupportedExtension && not isGenerated && not inBuildDir
 
 /// Filename token (path-like, ending in a supported source extension); the
-/// trailing `\b` keeps project/web files (`.csproj`, `.fsproj`, `.css`,
+/// trailing `\b` keeps project/web files (`.csproj`, `.css`,
 /// `.cshtml`) out.
 let private csFileToken =
-    Regex(@"[\w.\-/\\:]+\.(?:cs|csx|fs|fsi|fsx)\b", RegexOptions.IgnoreCase ||| RegexOptions.Compiled)
+    Regex(@"[\w.\-/\\:]+\.(?:cs|csx)\b", RegexOptions.IgnoreCase ||| RegexOptions.Compiled)
 
 /// True when `text` references at least one supported source file. The format flow
 /// pulls the exact edited path from a known toolArgs key, but read/search/shell tools

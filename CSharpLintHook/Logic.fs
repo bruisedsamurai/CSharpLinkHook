@@ -55,9 +55,7 @@ let formatAndWrite (path: string) : Program<FormatResult * bool> =
 /// The resolved supported source file a successful *edit* touched, or None when
 /// there is nothing to act on: the tool failed, named no file, or named one we
 /// skip (unsupported extension, generated, or under bin/obj). The format flow
-/// needs the exact path, so this reads a known toolArgs key; the read flow instead
-/// scans the raw args (see
-/// `Payload.referencesCSharpFile`).
+/// needs the exact path, so this reads a known toolArgs key.
 let private touchedSourceFile (info: Payload.PostToolUse.PostToolUse) : string option =
     if not (Payload.PostToolUse.isSuccess info) then
         None
@@ -83,21 +81,4 @@ let hookFormat: Program<unit> =
                 do! writeStdout (Payload.buildHookOutput (Payload.buildAdditionalContext r))
             else
                 return ()
-    }
-
-/// The postToolUse *read* flow (wired to bash/grep/view/powershell via the hooks.json
-/// matcher and selected by the `hook read` arg): when the tool's args name a
-/// supported source file anywhere (a source-file token in toolArgs — a path, a
-/// `command`, a grep target), append a note pointing the model at the
-/// RoslynLspMcp MCP methods for symbol information.
-let hookRead: Program<unit> =
-    program {
-        let! input = readStdin
-
-        match Payload.PostToolUse.decode input with
-        | Some info when
-            Payload.PostToolUse.isSuccess info
-            && (info.ToolArgs |> Option.exists Payload.referencesCSharpFile) ->
-            do! writeStdout (Payload.buildHookOutput Payload.roslynMcpNote)
-        | _ -> return ()
     }

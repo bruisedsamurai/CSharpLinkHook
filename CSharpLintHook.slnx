@@ -12,7 +12,6 @@
     <Folder Name="/dist/">
     </Folder>
     <Folder Name="/dist/roslyn-lsp-hook/">
-        <File Path="dist/roslyn-lsp-hook/.mcp.json"/>
         <File Path="dist/roslyn-lsp-hook/CSharpLintHook.deps.json"/>
         <File Path="dist/roslyn-lsp-hook/CSharpLintHook.dll"/>
         <File Path="dist/roslyn-lsp-hook/CSharpLintHook.runtimeconfig.json"/>
@@ -62,9 +61,6 @@
         <File Path="dist/roslyn-lsp-hook/RoslynLsp.exe"/>
         <File Path="dist/roslyn-lsp-hook/RoslynLsp.runtimeconfig.json"/>
         <File Path="dist/roslyn-lsp-hook/RoslynLspHook.exe"/>
-        <File Path="dist/roslyn-lsp-hook/RoslynLspMcp.deps.json"/>
-        <File Path="dist/roslyn-lsp-hook/RoslynLspMcp.dll"/>
-        <File Path="dist/roslyn-lsp-hook/RoslynLspMcp.runtimeconfig.json"/>
         <File Path="dist/roslyn-lsp-hook/System.Composition.AttributedModel.dll"/>
         <File Path="dist/roslyn-lsp-hook/System.Composition.Convention.dll"/>
         <File Path="dist/roslyn-lsp-hook/System.Composition.Hosting.dll"/>
@@ -121,9 +117,6 @@
         <File Path="dist/roslyn-lsp-hook-vscode/RoslynLsp.exe"/>
         <File Path="dist/roslyn-lsp-hook-vscode/RoslynLsp.runtimeconfig.json"/>
         <File Path="dist/roslyn-lsp-hook-vscode/RoslynLspHook.exe"/>
-        <File Path="dist/roslyn-lsp-hook-vscode/RoslynLspMcp.deps.json"/>
-        <File Path="dist/roslyn-lsp-hook-vscode/RoslynLspMcp.dll"/>
-        <File Path="dist/roslyn-lsp-hook-vscode/RoslynLspMcp.runtimeconfig.json"/>
         <File Path="dist/roslyn-lsp-hook-vscode/System.Composition.AttributedModel.dll"/>
         <File Path="dist/roslyn-lsp-hook-vscode/System.Composition.Convention.dll"/>
         <File Path="dist/roslyn-lsp-hook-vscode/System.Composition.Hosting.dll"/>
@@ -186,6 +179,4 @@
     <Project Path="RoslynLspHook.Tests/RoslynLspHook.Tests.fsproj"/>
     <Project Path="RoslynLspHook/RoslynLspHook.fsproj"/>
     <Project Path="RoslynLsp/RoslynLsp.fsproj"/>
-    <Project Path="RoslynLspMcp.Tests/RoslynLspMcp.Tests.fsproj"/>
-    <Project Path="RoslynLspMcp/RoslynLspMcp.fsproj"/>
 </Solution>

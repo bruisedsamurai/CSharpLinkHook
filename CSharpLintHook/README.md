@@ -31,11 +31,11 @@ pure and testable (swap in a stub interpreter).
 | `Common.fs`      | Domain types: `LineRange`, `DiffResult`, `FormatResult`.             |
 | `Effects.fs`     | `Program<'a>` free monad, smart constructors, `program { }` builder. |
 | `Payload.fs`     | Pure decode/build of the postToolUse payload (`PostToolUse.decode`, Thoth.Json.Net). |
-| `Logic.fs`       | Pure programs: `hookFormat`, `hookRead`, `computeFormat`, `formatAndWrite`. |
+| `Logic.fs`       | Pure programs: `hookFormat`, `computeFormat`, `formatAndWrite`.       |
 | `Git.fs`         | Interpreter backend: `git diff --unified=0 HEAD` -> changed ranges.  |
 | `Formatting.fs`  | Interpreter backend: node selection + `Formatter.FormatAsync`.       |
 | `Interpreter.fs` | `runAsync` — the only module that performs IO.                       |
-| `Program.fs`     | argv dispatch (`hook format` / `hook read` / `format`).              |
+| `Program.fs`     | argv dispatch (`hook format` / `format`).                           |
 
 Effects in the algebra: `readStdin`, `writeStdout`, `readFile`, `writeFile`,
 `fileExists`, `classifyDiff`, `formatWhole`, `formatRanges`, `logLine`.
@@ -66,7 +66,7 @@ binary + real Roslyn formatter), so it guards behaviour rather than mocks.
 | `PayloadTests`             | payload parsing for string-encoded **and** object `toolArgs`, camelCase + VS Code snake_case, every path key, `.cs`/generated/`bin`/`obj` guards |
 | `DiffAwareTests`           | only changed regions formatted; untouched code kept byte-for-byte; whole-file for untracked; idempotence; **two files** formatted independently |
 | `SymlinkRegressionTests`   | reaching a repo through a symlink stays diff-aware (guards the `Git.fs` fix) |
-| `HookTests`                | **format flow** writes in place + emits `additionalContext` for the real string-encoded, object, and snake_case payloads; **read flow** emits the RoslynLspMcp note when a `.cs` is touched; both no-op on failure / non-`.cs` / malformed payloads |
+| `HookTests`                | **format flow** writes in place + emits `additionalContext` for the real string-encoded, object, and snake_case payloads; no-ops on failure / non-`.cs` / malformed payloads |
 
 
 ## CLI usage
@@ -76,11 +76,6 @@ binary + real Roslyn formatter), so it guards behaviour rather than mocks.
 # changed C# file in place, and emit additionalContext describing the change.
 # Wired (via the hooks.json matcher) to the edit/create tools.
 dotnet CSharpLintHook/bin/Release/net10.0/CSharpLintHook.dll hook format < payload.json
-
-# Read flow: when a read/search/shell tool touched a *.cs file, emit
-# additionalContext naming the RoslynLspMcp MCP methods. Wired (via the matcher)
-# to the bash/grep/view/powershell tools.
-dotnet ...CSharpLintHook.dll hook read < payload.json
 
 # Standalone formatting of a single file:
 dotnet ...CSharpLintHook.dll format path/to/File.cs --stdout   # print result (default)
@@ -128,19 +123,6 @@ tool result was a success and the path is a real C# source file (`.cs` or
 > repo. It logs raw payloads (re-register it in `postToolUse.json` via
 > `uv run` if you need to inspect the exact `toolArgs` for a tool). Its
 > `postToolUse.log` output is transient and should not be committed.
-
-### Read flow (read/search/shell tools)
-
-A second `postToolUse` wiring runs `CSharpLintHook hook read` for the
-**read/search/shell** tools — `bash`, `grep`, `view`, and `powershell` — selected
-by the matcher `"bash|grep|view|powershell"`. It decodes the same payload and, only
-when the tool touched a `*.cs` file, emits a single `additionalContext` line naming
-the RoslynLspMcp MCP methods (`get_class_constructors_and_properties`,
-`get_class_methods`, `get_namespace_declarations`) so the model is reminded it can
-call them to learn more about C# symbols. The methods are named directly rather than
-the server, since the MCP server can be registered under any name in a user's
-config. The `.cs` check is pure path inspection, so — unlike the format flow — it
-never reads or reformats anything.
 
 ## Manual test recipe
 

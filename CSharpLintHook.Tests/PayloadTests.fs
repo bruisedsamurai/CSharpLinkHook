@@ -169,23 +169,3 @@ let ``decode captures the textual toolArgs for string-encoded args`` () =
         Assert.True info.ToolArgs.IsSome
         Assert.Contains("Bar.cs", info.ToolArgs.Value)
     | None -> failwith "expected a parsed payload"
-
-[<Theory>]
-[<InlineData("dotnet build src/Foo.cs", true)>]
-[<InlineData("dotnet script scripts/Foo.csx", true)>]
-[<InlineData("dotnet build src/Foo.fs", false)>]
-[<InlineData("dotnet fsi scripts/Foo.fsx", false)>]
-[<InlineData("type C:\\src\\Foo.fsi", false)>]
-[<InlineData("type C:\\src\\Foo.cs", true)>]
-[<InlineData("grep class ./A.cs ./B.cs", true)>]
-[<InlineData("dotnet build App.csproj", false)>]
-[<InlineData("dotnet build App.fsproj", false)>]
-[<InlineData("link styles.css", false)>]
-[<InlineData("render View.cshtml", false)>]
-[<InlineData("cat README.md", false)>]
-[<InlineData("echo hello world", false)>]
-[<InlineData("cat obj/Debug/Gen.cs", false)>]
-[<InlineData("cat obj/Debug/Gen.fs", false)>]
-[<InlineData("edit Foo.g.cs", false)>]
-let ``referencesCSharpFile spots a supported source filename anywhere in the args text`` (text: string) (expected: bool) =
-    Assert.Equal(expected, Payload.referencesCSharpFile text)

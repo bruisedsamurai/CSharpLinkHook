@@ -169,20 +169,13 @@ copilot plugin uninstall roslyn-lsp-hook
   to it. Progress is written to `%TEMP%/roslyn-lsp-<pipe>-setup.log`
   (`/tmp` on Unix). For a workspace with **several** solutions, run the
   `roslyn-start` skill to pick one.
-- **`postToolUse`** wires four entries. `CSharpLintHook hook format` (matched to
+- **`postToolUse`** wires three entries. `CSharpLintHook hook format` (matched to
   `edit|create`) reformats the changed regions of the edited C# file in place.
-  `CSharpLintHook hook read` (matched to `bash|grep|view|powershell`) appends a line
-  (`additionalContext`) naming the RoslynLspMcp MCP methods —
-  `get_class_constructors_and_properties`, `get_class_methods`,
-  `get_namespace_declarations` — whenever one of those tools touched a `*.cs` file,
-  so the model knows it can use them to learn more about C# symbols. The methods are
-  named directly because the MCP server can be registered under any name in a user's
-  config. The ast-grep outline hook (matched to `grep|view`) installs/updates
+  The ast-grep outline hook (matched to `grep|view`) installs/updates
   `@ast-grep/cli` via `npm i -g`, then runs `ast-grep outline <path>` for file targets
   and folder targets, then appends the
   outline as `additionalContext`. `RoslynLspHook` then reports any compiler diagnostics for edited C# back to
-  the agent by appending them to the tool result (`modifiedResult`). One binary picks
-  the flow from its argument (`hook format` vs `hook read`); the matcher keeps each
+  the agent by appending them to the tool result (`modifiedResult`). The matcher keeps each
   flow scoped to the right tools, so reading a `.cs` file never reformats it.
 
 > **Copilot CLI 1.0.64 note.** A `sessionStart` hook's stdout is discarded by the
@@ -192,9 +185,7 @@ copilot plugin uninstall roslyn-lsp-hook
 > instead returns a `modifiedResult` that echoes the original tool result with the
 > diagnostics appended to `textResultForLlm`. (`CSharpLintHook`'s format flow still
 > emits `additionalContext`; its reformatting is a file side effect that works
-> regardless, so only its informational note is dropped. The read flow is *only* an
-> `additionalContext` note, so until the CLI honours it that flow has no visible
-> effect — a minor follow-up. The ast-grep outline hook also returns
+> regardless, so only its informational note is dropped. The ast-grep outline hook also returns
 > `additionalContext`, so it is subject to the same CLI behavior.)
 
 The language server itself is the `roslyn-language-server` .NET global tool; the

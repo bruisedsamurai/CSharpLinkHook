@@ -56,42 +56,6 @@ let private runFormatHook (stdin: string) : string =
         Console.SetIn originalIn
         Console.SetOut originalOut
 
-/// Run the read flow with `stdin` on Console.In, capturing stdout.
-let private runReadHook (stdin: string) : string =
-    let originalIn = Console.In
-    let originalOut = Console.Out
-    use reader = new StringReader(stdin)
-    use writer = new StringWriter()
-
-    try
-        Console.SetIn reader
-        Console.SetOut writer
-        Interpreter.run Logic.hookRead
-        writer.ToString()
-    finally
-        Console.SetIn originalIn
-        Console.SetOut originalOut
-
-/// A read-tool payload (e.g. `view`) whose toolArgs names `relPath`.
-let private readToolPayload (cwd: string) (resultType: string) (relPath: string) : string =
-    let innerArgs = sprintf """{"path":%s}""" (jsonStr relPath)
-
-    sprintf
-        """{"cwd":%s,"toolName":"view","toolResult":{"resultType":%s},"toolArgs":%s}"""
-        (jsonStr cwd)
-        (jsonStr resultType)
-        (jsonStr innerArgs)
-
-/// A read/search/shell payload whose toolArgs is the given inner JSON object, delivered
-/// as a JSON-encoded string (the production shape). Lets a test put the `.cs` name
-/// wherever the tool would — a `command`, a `paths` array — not just a path key.
-let private readPayloadWithArgs (toolName: string) (resultType: string) (innerArgs: string) : string =
-    sprintf
-        """{"cwd":"/tmp","toolName":%s,"toolResult":{"resultType":%s},"toolArgs":%s}"""
-        (jsonStr toolName)
-        (jsonStr resultType)
-        (jsonStr innerArgs)
-
 [<Fact>]
 let ``format flow formats the changed region in place and emits additionalContext`` () =
     use repo = new ScratchRepo()
@@ -187,64 +151,3 @@ let ``format flow emits nothing when the changed file needs no formatting`` () =
     let stdout = runFormatHook (payload repo.Dir "success" "C.cs")
     Assert.Equal("", stdout)
 
-[<Fact>]
-let ``read flow emits additionalContext naming the RoslynLspMcp methods for a .cs file`` () =
-    // A read/search/shell tool that touched a C# file: emit the note pointing the model
-    // at the RoslynLspMcp MCP methods. No formatting happens here.
-    let stdout = runReadHook (readToolPayload "/tmp" "success" "C.cs")
-
-    Assert.Contains("\"additionalContext\"", stdout)
-    Assert.Contains("get_class_constructors_and_properties", stdout)
-    Assert.Contains("get_class_methods", stdout)
-    Assert.Contains("get_namespace_declarations", stdout)
-    Assert.Contains("symbols", stdout)
-
-[<Fact>]
-let ``read flow is a no-op for an .fs file (F# is not Roslyn-formattable)`` () =
-    let stdout = runReadHook (readToolPayload "/tmp" "success" "Script.fs")
-    Assert.Equal("", stdout)
-
-[<Fact>]
-let ``read flow is a no-op when the tool did not touch a supported source file`` () =
-    let stdout = runReadHook (readToolPayload "/tmp" "success" "notes.txt")
-    Assert.Equal("", stdout)
-
-[<Fact>]
-let ``read flow is a no-op when the tool result was not a success`` () =
-    let stdout = runReadHook (readToolPayload "/tmp" "error" "C.cs")
-    Assert.Equal("", stdout)
-
-[<Fact>]
-let ``read flow swallows malformed payloads without output`` () =
-    let stdout = runReadHook "this is not json"
-    Assert.Equal("", stdout)
-
-[<Fact>]
-let ``read flow fires for a bash command that names a .cs file`` () =
-    // bash/powershell put the filename inside a `command` string, not a path key — the
-    // pathKeys-only read flow would miss it; the toolArgs scan catches it.
-    let stdout =
-        runReadHook (readPayloadWithArgs "bash" "success" """{"command":"dotnet build src/Foo.cs"}""")
-
-    Assert.Contains("get_class_methods", stdout)
-
-[<Fact>]
-let ``read flow fires for a powershell command that names a .cs file`` () =
-    let stdout =
-        runReadHook (readPayloadWithArgs "powershell" "success" """{"command":"type Bar.cs"}""")
-
-    Assert.Contains("get_namespace_declarations", stdout)
-
-[<Fact>]
-let ``read flow fires for a grep over a .cs path`` () =
-    let stdout =
-        runReadHook (readPayloadWithArgs "grep" "success" """{"pattern":"class","paths":["src/Foo.cs"]}""")
-
-    Assert.Contains("\"additionalContext\"", stdout)
-
-[<Fact>]
-let ``read flow ignores a bash command that names only a .csproj`` () =
-    let stdout =
-        runReadHook (readPayloadWithArgs "bash" "success" """{"command":"dotnet build App.csproj"}""")
-
-    Assert.Equal("", stdout)

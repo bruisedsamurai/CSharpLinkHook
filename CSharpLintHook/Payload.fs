@@ -2,7 +2,6 @@ module CSharpLintHook.Payload
 
 open System
 open System.IO
-open System.Text.RegularExpressions
 open Thoth.Json.Net
 open CSharpLintHook.Common
 
@@ -137,22 +136,6 @@ let isFormattableCSharp (fullPath: string) : bool =
 
     hasSupportedExtension && not isGenerated && not inBuildDir
 
-/// Filename token (path-like, ending in a supported source extension); the
-/// trailing `\b` keeps project/web files (`.csproj`, `.css`,
-/// `.cshtml`) out.
-let private csFileToken =
-    Regex(@"[\w.\-/\\:]+\.(?:cs|csx)\b", RegexOptions.IgnoreCase ||| RegexOptions.Compiled)
-
-/// True when `text` references at least one supported source file. The format flow
-/// pulls the exact edited path from a known toolArgs key, but read/search/shell tools
-/// (bash/powershell `command`, grep `paths`/`glob`) name the file wherever they like, so
-/// the read flow scans the whole toolArgs text for any source-file token and keeps those
-/// `isFormattableCSharp` accepts.
-let referencesCSharpFile (text: string) : bool =
-    csFileToken.Matches text
-    |> Seq.cast<Match>
-    |> Seq.exists (fun m -> isFormattableCSharp m.Value)
-
 /// Human-readable note describing what the hook changed.
 let buildAdditionalContext (r: FormatResult) : string =
     let name = Path.GetFileName r.Path
@@ -164,14 +147,6 @@ let buildAdditionalContext (r: FormatResult) : string =
             $"reformatted %d{r.Regions} changed region(s) in %s{name}"
 
     $"CSharpLintHook %s{detail} (whitespace/formatting only). The on-disk file now reflects the formatted version."
-
-/// Note appended to the tool result for read/search/shell tools. It names the
-/// RoslynLspMcp MCP methods directly rather than the server, since the server can
-/// be registered under any name in a user's MCP config — the method names are the
-/// stable handle the model can act on.
-let roslynMcpNote =
-    "The MCP methods get_class_constructors_and_properties, get_class_methods, and "
-    + "get_namespace_declarations can be used to know more about symbols."
 
 /// Serialize the postToolUse hook response carrying additionalContext.
 let buildHookOutput (additionalContext: string) : string =

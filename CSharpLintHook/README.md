@@ -30,12 +30,12 @@ pure and testable (swap in a stub interpreter).
 |------------------|----------------------------------------------------------------------|
 | `Common.fs`      | Domain types: `LineRange`, `DiffResult`, `FormatResult`.             |
 | `Effects.fs`     | `Program<'a>` free monad, smart constructors, `program { }` builder. |
-| `Payload.fs`     | Pure decode/build of the postToolUse payload (`PostToolUse.decode`, Thoth.Json.Net). |
-| `Logic.fs`       | Pure programs: `hookFormat`, `computeFormat`, `formatAndWrite`.       |
+| `Payload.fs`     | Pure decode/build of the postToolUse payload (`PostToolUse.decode`) and the co-author guard (`containsCopilotCoauthor`), Thoth.Json.Net. |
+| `Logic.fs`       | Pure programs: `hookFormat`, `commitGuard`, `computeFormat`, `formatAndWrite`. |
 | `Git.fs`         | Interpreter backend: `git diff --unified=0 HEAD` -> changed ranges.  |
 | `Formatting.fs`  | Interpreter backend: node selection + `Formatter.FormatAsync`.       |
 | `Interpreter.fs` | `runAsync` — the only module that performs IO.                       |
-| `Program.fs`     | argv dispatch (`hook format` / `format`).                           |
+| `Program.fs`     | argv dispatch (`hook format` / `hook commit-guard` / `format`).      |
 
 Effects in the algebra: `readStdin`, `writeStdout`, `readFile`, `writeFile`,
 `fileExists`, `classifyDiff`, `formatWhole`, `formatRanges`, `logLine`.
@@ -63,7 +63,7 @@ binary + real Roslyn formatter), so it guards behaviour rather than mocks.
 
 | Area                       | What it pins down                                                            |
 |----------------------------|-----------------------------------------------------------------------------|
-| `PayloadTests`             | payload parsing for string-encoded **and** object `toolArgs`, camelCase + VS Code snake_case, every path key, `.cs`/generated/`bin`/`obj` guards |
+| `PayloadTests`             | payload parsing for string-encoded **and** object `toolArgs`, camelCase + VS Code snake_case, every path key, `.cs`/generated/`bin`/`obj` guards, and the Copilot co-author trailer detector |
 | `DiffAwareTests`           | only changed regions formatted; untouched code kept byte-for-byte; whole-file for untracked; idempotence; **two files** formatted independently |
 | `SymlinkRegressionTests`   | reaching a repo through a symlink stays diff-aware (guards the `Git.fs` fix) |
 | `HookTests`                | **format flow** writes in place + emits `additionalContext` for the real string-encoded, object, and snake_case payloads; no-ops on failure / non-`.cs` / malformed payloads |
@@ -123,6 +123,20 @@ tool result was a success and the path is a real C# source file (`.cs` or
 > repo. It logs raw payloads (re-register it in `postToolUse.json` via
 > `uv run` if you need to inspect the exact `toolArgs` for a tool). Its
 > `postToolUse.log` output is transient and should not be committed.
+
+## Commit-guard hook (preToolUse)
+
+A `preToolUse` wiring runs `CSharpLintHook hook commit-guard` for the
+command-running tools — `bash` and `powershell` — selected by the matcher
+`"bash|powershell"`. It scans the command about to run and, when it carries the
+Copilot co-author trailer (`Co-authored-by: Copilot App`, matched by a precompiled
+case-insensitive regex), it denies the call by emitting
+`{ "permissionDecision": "deny", "permissionDecisionReason": "…" }`, asking the
+agent to drop the trailer and retry. Any other command emits nothing and proceeds.
+This catches the trailer no matter how the commit is made (`git commit`,
+`jj commit`, …). `preToolUse` command hooks are **fail-closed** (a non-zero exit
+denies the tool), so the dispatch swallows every error and exits 0 — only an
+explicit deny on stdout blocks a command.
 
 ## Manual test recipe
 

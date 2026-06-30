@@ -169,3 +169,13 @@ let ``decode captures the textual toolArgs for string-encoded args`` () =
         Assert.True info.ToolArgs.IsSome
         Assert.Contains("Bar.cs", info.ToolArgs.Value)
     | None -> failwith "expected a parsed payload"
+
+[<Theory>]
+[<InlineData("git commit -m \"Fix\n\nCo-authored-by: Copilot App <1+Copilot@users.noreply.github.com>\"", true)>]
+[<InlineData("jj commit -m \"msg\n\nCo-authored-by: Copilot App <x>\"", true)>]
+[<InlineData("git commit -m \"x\n\nCo-authored-by:   Copilot App <x>\"", true)>]
+[<InlineData("git commit -m \"x\n\nco-authored-by: copilot app <x>\"", true)>]
+[<InlineData("git commit -m \"Fix the bug\"", false)>]
+[<InlineData("git commit -m \"x\n\nCo-authored-by: Someone Else <s@e.z>\"", false)>]
+let ``containsCopilotCoauthor spots the Copilot co-author trailer`` (text: string) (expected: bool) =
+    Assert.Equal(expected, Payload.containsCopilotCoauthor text)

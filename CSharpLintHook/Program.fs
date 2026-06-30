@@ -19,6 +19,9 @@ let private usage () =
     eprintfn "Usage:"
     eprintfn "  csharplinthook hook [format]   Read a postToolUse payload from stdin and reformat"
     eprintfn "                                 the changed C# file in place (edit/create tools)."
+    eprintfn "  csharplinthook hook commit-guard"
+    eprintfn "                                 Read a preToolUse payload from stdin and deny a commit"
+    eprintfn "                                 that adds Copilot as a co-author (bash/powershell tools)."
     eprintfn "  csharplinthook format <file>   Format the changed regions of <file>."
     eprintfn "      --stdout   write formatted text to stdout (default)"
     eprintfn "      --write    rewrite <file> in place if it changed"
@@ -69,6 +72,15 @@ let main argv =
         // Format flow (edit/create): never break the agent loop — swallow errors, exit 0.
         try
             Interpreter.run Logic.hookFormat
+            0
+        with _ ->
+            0
+    | [ "hook"; "commit-guard" ] ->
+        // preToolUse guard (bash/powershell): allow-by-default. preToolUse command hooks are
+        // fail-closed (a non-zero exit denies the tool), so swallow every error and exit 0 —
+        // only an explicit deny on stdout should block a command.
+        try
+            Interpreter.run Logic.commitGuard
             0
         with _ ->
             0

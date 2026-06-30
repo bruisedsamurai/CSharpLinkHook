@@ -82,3 +82,18 @@ let hookFormat: Program<unit> =
             else
                 return ()
     }
+
+/// The preToolUse *commit-guard* flow (wired to bash/powershell via the hooks.json
+/// matcher and selected by the `hook commit-guard` arg): when the command about to run
+/// carries the Copilot co-author trailer, deny it and ask the agent to remove itself as
+/// co-author; otherwise emit nothing, so the command proceeds untouched. Scanning the raw
+/// payload is enough because the marker only ever appears inside the command text.
+let commitGuard: Program<unit> =
+    program {
+        let! input = readStdin
+
+        if Payload.containsCopilotCoauthor input then
+            do! writeStdout (Payload.buildCoauthorDenyOutput ())
+        else
+            return ()
+    }

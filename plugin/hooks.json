@@ -10,6 +10,16 @@
         "timeoutSec": 30
       }
     ],
+    "preToolUse": [
+      {
+        "type": "command",
+        "matcher": "bash|powershell",
+        "cwd": ".",
+        "bash": "test -f \"${PLUGIN_ROOT}/CSharpLintHook.dll\" && dotnet \"${PLUGIN_ROOT}/CSharpLintHook.dll\" hook commit-guard || true",
+        "powershell": "if (Test-Path \"${PLUGIN_ROOT}\\CSharpLintHook.dll\") { dotnet \"${PLUGIN_ROOT}\\CSharpLintHook.dll\" hook commit-guard }; exit 0",
+        "timeoutSec": 30
+      }
+    ],
     "postToolUse": [
       {
         "type": "command",

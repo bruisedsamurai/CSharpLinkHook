@@ -2,6 +2,7 @@ module CSharpLintHook.Payload
 
 open System
 open System.IO
+open System.Text.RegularExpressions
 open Thoth.Json.Net
 open CSharpLintHook.Common
 
@@ -151,4 +152,26 @@ let buildAdditionalContext (r: FormatResult) : string =
 /// Serialize the postToolUse hook response carrying additionalContext.
 let buildHookOutput (additionalContext: string) : string =
     Encode.object [ "additionalContext", Encode.string additionalContext ]
+    |> Encode.toString 0
+
+/// The Copilot co-author trailer the agent must not introduce. Precompiled and
+/// case-insensitive, tolerating extra spaces after the colon, so the preToolUse guard
+/// stays cheap on every bash/powershell command. Matching this marker in the raw command
+/// text catches it no matter how the commit is made (`git commit`, `jj commit`, …).
+let private copilotCoauthorPattern =
+    Regex(@"Co-authored-by:\s*Copilot App", RegexOptions.IgnoreCase ||| RegexOptions.Compiled)
+
+/// True when `text` carries the Copilot co-author trailer.
+let containsCopilotCoauthor (text: string) : bool =
+    copilotCoauthorPattern.IsMatch text
+
+/// The preToolUse deny response that asks the agent to drop itself as co-author. A
+/// `permissionDecision` of "deny" with a reason blocks the command and tells the model
+/// what to fix; emitting nothing instead lets the command proceed.
+let buildCoauthorDenyOutput () : string =
+    Encode.object
+        [ "permissionDecision", Encode.string "deny"
+          "permissionDecisionReason",
+          Encode.string
+              "Do not add Copilot as a co-author. Remove the \"Co-authored-by: Copilot App\" trailer from the commit message, then run the command again." ]
     |> Encode.toString 0

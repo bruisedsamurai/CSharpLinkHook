@@ -87,3 +87,31 @@ let ``format flow is silent for an unsuccessful tool result`` () =
 
     // Decoded, judged not-a-success, stopped before any filesystem effect.
     Assert.Equal<Event list>([ StdinRead ], trace.Events)
+
+// ---- commit-guard flow -----------------------------------------------------------
+
+[<Fact>]
+let ``commit-guard denies a commit that adds Copilot as co-author`` () =
+    let stdin =
+        payload "powershell" "/tmp" "success"
+            """{"command":"git commit -m \"Fix\n\nCo-authored-by: Copilot App <1+Copilot@users.noreply.github.com>\""}"""
+
+    let trace = run { world with Stdin = stdin } Logic.commitGuard
+
+    // The transcript: read stdin, then write exactly one deny decision — no filesystem.
+    match trace.Events with
+    | [ StdinRead; StdoutWritten decision ] ->
+        Assert.Contains("\"permissionDecision\"", decision)
+        Assert.Contains("deny", decision)
+        Assert.Contains("co-author", decision)
+    | other -> Assert.Fail(sprintf "unexpected transcript: %A" other)
+
+    Assert.Empty(writes trace)
+
+[<Fact>]
+let ``commit-guard stays silent for a commit without the trailer`` () =
+    let stdin = payload "powershell" "/tmp" "success" """{"command":"git commit -m \"Fix bug\""}"""
+    let trace = run { world with Stdin = stdin } Logic.commitGuard
+
+    // Read stdin, emit nothing — the command is allowed to proceed.
+    Assert.Equal<Event list>([ StdinRead ], trace.Events)

@@ -177,6 +177,12 @@ copilot plugin uninstall roslyn-lsp-hook
   outline as `additionalContext`. `RoslynLspHook` then reports any compiler diagnostics for edited C# back to
   the agent by appending them to the tool result (`modifiedResult`). The matcher keeps each
   flow scoped to the right tools, so reading a `.cs` file never reformats it.
+- **`preToolUse`** wires one entry: `CSharpLintHook hook commit-guard` (matched to
+  `bash|powershell`) inspects the command about to run and **denies** it when the
+  message carries the Copilot co-author trailer (`Co-authored-by: Copilot App`),
+  asking the agent to remove itself as co-author and retry. It catches the trailer
+  in any commit command (`git commit`, `jj commit`, …) and is allow-by-default —
+  every other command, and any hook error, lets the tool proceed.
 
 > **Copilot CLI 1.0.64 note.** A `sessionStart` hook's stdout is discarded by the
 > CLI, so the server is started as a process side effect (the detached worker)

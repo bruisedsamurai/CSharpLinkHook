@@ -8,6 +8,15 @@
         "command": "if (Test-Path \"${CLAUDE_PLUGIN_ROOT}\\RoslynLspHook.exe\") { & \"${CLAUDE_PLUGIN_ROOT}\\RoslynLspHook.exe\" }; exit 0"
       }
     ],
+    "PreToolUse": [
+      {
+        "type": "command",
+        "matcher": "bash|powershell",
+        "cwd": ".",
+        "timeoutSec": 30,
+        "command": "if (Test-Path \"${CLAUDE_PLUGIN_ROOT}\\CSharpLintHook.dll\") { dotnet \"${CLAUDE_PLUGIN_ROOT}\\CSharpLintHook.dll\" hook commit-guard }; exit 0"
+      }
+    ],
     "PostToolUse": [
       {
         "type": "command",

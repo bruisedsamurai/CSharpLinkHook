@@ -8,6 +8,13 @@ A **GitHub Copilot CLI plugin** that wires C# and structural-code hooks into you
   appending them to the tool result (`modifiedResult`). See [`RoslynLspHook/README.md`](RoslynLspHook/README.md).
 - **ast-grep outline hook** — appends `ast-grep outline <path>` context when the
   agent reads or searches a file or folder.
+- **PwshLintHook** — a `preToolUse` guard that parses the `powershell` tool's command
+  and **denies** slow file/content searches, pointing the agent at a faster tool
+  (`Get-ChildItem` → the `fd` CLI; `Get-Content`/`Select-String` → the `fff` MCP). See
+  [`PwshLintHook/README.md`](PwshLintHook/README.md).
+- **fff MCP server** — the [FFF](https://github.com/dmtrKovalenko/fff) fast file/content
+  finder, built from source and wired in as an MCP server (`mcpServers.fff`) — the tool
+  PwshLintHook redirects content searches to.
 
 The build packages these tools, the hook wiring, and the `roslyn-start` /
 `ast-grep` skills into a single installable plugin folder.
@@ -15,8 +22,13 @@ The build packages these tools, the hook wiring, and the `roslyn-start` /
 ## Prerequisites
 
 - **.NET 10 SDK** (pinned in [`global.json`](global.json)).
+- **Network access at build time** — the `fff-mcp` MCP server is installed by fetching
+  and running [fff's own installer](https://github.com/dmtrKovalenko/fff)
+  (`install-mcp.ps1` / `install-mcp.sh`), which downloads the latest prebuilt release
+  binary into the plugin. No Rust/Zig toolchain is required.
 - **Node.js + npm** at runtime — the ast-grep outline hook installs/updates
-  `@ast-grep/cli` globally (`npm i -g @ast-grep/cli`) each time it runs.
+  `@ast-grep/cli` globally, and PwshLintHook installs `fd` via `npm install -g fd-find`
+  when it is missing.
 - **GitHub Copilot CLI** (`copilot`) to install and run the plugin.
 
 ## Build the plugin folder
@@ -54,13 +66,16 @@ The build writes the assembled plugin to:
 
 ```
 dist/roslyn-lsp-hook/
-├── plugin.json                 # manifest
-├── hooks.json                  # sessionStart + postToolUse wiring
+├── plugin.json                 # manifest (+ mcpServers.fff)
+├── hooks.json                  # sessionStart + pre/postToolUse wiring
 ├── skills/
 │   ├── roslyn-start/SKILL.md   # starts the Roslyn language server
 │   └── ast-grep/               # fetched from ast-grep/agent-skill
 ├── RoslynLspHook               # native AOT client binary
 ├── AstGrepOutline              # native AOT postToolUse outline hook
+├── fff-mcp                     # FFF MCP server binary (fetched via fff's installer)
+├── PwshLintHook/               # preToolUse PowerShell guard (isolated subfolder)
+│   └── PwshLintHook.dll, *.dll # run via dotnet; System.Management.Automation closure
 ├── CSharpLintHook.dll          # framework-dependent formatter (run via dotnet)
 └── *.dll, *.json               # CSharpLintHook runtime dependencies
 ```
@@ -177,12 +192,18 @@ copilot plugin uninstall roslyn-lsp-hook
   outline as `additionalContext`. `RoslynLspHook` then reports any compiler diagnostics for edited C# back to
   the agent by appending them to the tool result (`modifiedResult`). The matcher keeps each
   flow scoped to the right tools, so reading a `.cs` file never reformats it.
-- **`preToolUse`** wires one entry: `CSharpLintHook hook commit-guard` (matched to
+- **`preToolUse`** wires two entries. `CSharpLintHook hook commit-guard` (matched to
   `bash|powershell`) inspects the command about to run and **denies** it when the
   message carries the Copilot co-author trailer (`Co-authored-by: Copilot App`),
-  asking the agent to remove itself as co-author and retry. It catches the trailer
-  in any commit command (`git commit`, `jj commit`, …) and is allow-by-default —
+  asking the agent to remove itself as co-author and retry. `PwshLintHook hook
+  tool-guard` (matched to `powershell`) parses the command with the PowerShell AST
+  parser and **denies** a file search (`Get-ChildItem`) with the equivalent `fd`
+  command, or a content search (`Select-String` / `Get-Content` + filter) with a
+  pointer to the `fff` MCP — ensuring `fd` is installed first. Both are allow-by-default:
   every other command, and any hook error, lets the tool proceed.
+- **MCP server `fff`** — the manifest registers the `fff` MCP server (a stdio server
+  resolved from `${PLUGIN_ROOT}/fff-mcp`), so the fast file/content finder PwshLintHook
+  redirects to is available in-session.
 
 > **Copilot CLI 1.0.64 note.** A `sessionStart` hook's stdout is discarded by the
 > CLI, so the server is started as a process side effect (the detached worker)

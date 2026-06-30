@@ -176,6 +176,8 @@
     <Project Path="CSharpLintHook.Tests/CSharpLintHook.Tests.fsproj"/>
     <Project Path="AstGrepOutline/AstGrepOutline.fsproj"/>
     <Project Path="CSharpLintHook/CSharpLintHook.fsproj"/>
+    <Project Path="PwshLintHook/PwshLintHook.fsproj"/>
+    <Project Path="PwshLintHook.Tests/PwshLintHook.Tests.fsproj"/>
     <Project Path="RoslynLspHook.Tests/RoslynLspHook.Tests.fsproj"/>
     <Project Path="RoslynLspHook/RoslynLspHook.fsproj"/>
     <Project Path="RoslynLsp/RoslynLsp.fsproj"/>

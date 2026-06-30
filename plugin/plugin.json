@@ -1,12 +1,19 @@
 {
   "name": "roslyn-lsp-hook",
-  "description": "C# hooks for GitHub Copilot CLI: diff-aware Roslyn formatting, Roslyn LSP diagnostics, and ast-grep outline context for viewed/searched files.",
+  "description": "C# and shell hooks for GitHub Copilot CLI: diff-aware Roslyn formatting, Roslyn LSP diagnostics, ast-grep outline context, and a PowerShell pipeline guard that redirects file/content searches to fd and the bundled fff MCP server.",
   "version": "0.1.0",
   "author": {
     "name": "CSharpLintHook"
   },
   "license": "MIT",
-  "keywords": ["csharp", "dotnet", "roslyn", "lsp", "formatting", "lint", "hooks", "ast-grep"],
+  "keywords": ["csharp", "dotnet", "roslyn", "lsp", "formatting", "lint", "hooks", "ast-grep", "powershell", "fd", "fff", "mcp"],
   "skills": ["skills/"],
-  "hooks": "hooks.json"
+  "hooks": "hooks.json",
+  "mcpServers": {
+    "fff": {
+      "type": "stdio",
+      "command": "${PLUGIN_ROOT}/fff-mcp",
+      "args": []
+    }
+  }
 }

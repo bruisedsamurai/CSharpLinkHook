@@ -15,6 +15,13 @@
         "cwd": ".",
         "timeoutSec": 30,
         "command": "if (Test-Path \"${CLAUDE_PLUGIN_ROOT}\\CSharpLintHook.dll\") { dotnet \"${CLAUDE_PLUGIN_ROOT}\\CSharpLintHook.dll\" hook commit-guard }; exit 0"
+      },
+      {
+        "type": "command",
+        "matcher": "powershell",
+        "cwd": ".",
+        "timeoutSec": 30,
+        "command": "if (Test-Path \"${CLAUDE_PLUGIN_ROOT}\\PwshLintHook\\PwshLintHook.dll\") { dotnet \"${CLAUDE_PLUGIN_ROOT}\\PwshLintHook\\PwshLintHook.dll\" hook tool-guard }; exit 0"
       }
     ],
     "PostToolUse": [

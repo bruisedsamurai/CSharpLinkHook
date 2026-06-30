@@ -18,6 +18,14 @@
         "bash": "test -f \"${PLUGIN_ROOT}/CSharpLintHook.dll\" && dotnet \"${PLUGIN_ROOT}/CSharpLintHook.dll\" hook commit-guard || true",
         "powershell": "if (Test-Path \"${PLUGIN_ROOT}\\CSharpLintHook.dll\") { dotnet \"${PLUGIN_ROOT}\\CSharpLintHook.dll\" hook commit-guard }; exit 0",
         "timeoutSec": 30
+      },
+      {
+        "type": "command",
+        "matcher": "powershell",
+        "cwd": ".",
+        "bash": "test -f \"${PLUGIN_ROOT}/PwshLintHook/PwshLintHook.dll\" && dotnet \"${PLUGIN_ROOT}/PwshLintHook/PwshLintHook.dll\" hook tool-guard || true",
+        "powershell": "if (Test-Path \"${PLUGIN_ROOT}\\PwshLintHook\\PwshLintHook.dll\") { dotnet \"${PLUGIN_ROOT}\\PwshLintHook\\PwshLintHook.dll\" hook tool-guard }; exit 0",
+        "timeoutSec": 30
       }
     ],
     "postToolUse": [

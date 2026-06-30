@@ -56,11 +56,6 @@
         <File Path="dist/roslyn-lsp-hook/ModelContextProtocol.dll"/>
         <File Path="dist/roslyn-lsp-hook/Newtonsoft.Json.dll"/>
         <File Path="dist/roslyn-lsp-hook/plugin.json"/>
-        <File Path="dist/roslyn-lsp-hook/RoslynLsp.deps.json"/>
-        <File Path="dist/roslyn-lsp-hook/RoslynLsp.dll"/>
-        <File Path="dist/roslyn-lsp-hook/RoslynLsp.exe"/>
-        <File Path="dist/roslyn-lsp-hook/RoslynLsp.runtimeconfig.json"/>
-        <File Path="dist/roslyn-lsp-hook/RoslynLspHook.exe"/>
         <File Path="dist/roslyn-lsp-hook/System.Composition.AttributedModel.dll"/>
         <File Path="dist/roslyn-lsp-hook/System.Composition.Convention.dll"/>
         <File Path="dist/roslyn-lsp-hook/System.Composition.Hosting.dll"/>
@@ -112,11 +107,6 @@
         <File Path="dist/roslyn-lsp-hook-vscode/ModelContextProtocol.Core.dll"/>
         <File Path="dist/roslyn-lsp-hook-vscode/ModelContextProtocol.dll"/>
         <File Path="dist/roslyn-lsp-hook-vscode/Newtonsoft.Json.dll"/>
-        <File Path="dist/roslyn-lsp-hook-vscode/RoslynLsp.deps.json"/>
-        <File Path="dist/roslyn-lsp-hook-vscode/RoslynLsp.dll"/>
-        <File Path="dist/roslyn-lsp-hook-vscode/RoslynLsp.exe"/>
-        <File Path="dist/roslyn-lsp-hook-vscode/RoslynLsp.runtimeconfig.json"/>
-        <File Path="dist/roslyn-lsp-hook-vscode/RoslynLspHook.exe"/>
         <File Path="dist/roslyn-lsp-hook-vscode/System.Composition.AttributedModel.dll"/>
         <File Path="dist/roslyn-lsp-hook-vscode/System.Composition.Convention.dll"/>
         <File Path="dist/roslyn-lsp-hook-vscode/System.Composition.Hosting.dll"/>
@@ -137,9 +127,6 @@
         <File Path="dist/roslyn-lsp-hook/runtimes/win/lib/net10.0/System.Diagnostics.EventLog.dll"/>
         <File Path="dist/roslyn-lsp-hook/runtimes/win/lib/net10.0/System.Diagnostics.EventLog.Messages.dll"/>
     </Folder>
-    <Folder Name="/dist/roslyn-lsp-hook/skills/roslyn-start/">
-        <File Path="dist/roslyn-lsp-hook/skills/roslyn-start/SKILL.md"/>
-    </Folder>
     <Folder Name="/dist/roslyn-lsp-hook-vscode/.claude-plugin/">
         <File Path="dist/roslyn-lsp-hook-vscode/.claude-plugin/plugin.json"/>
     </Folder>
@@ -158,18 +145,12 @@
         <File Path="dist/roslyn-lsp-hook-vscode/runtimes/win/lib/net10.0/System.Diagnostics.EventLog.dll"/>
         <File Path="dist/roslyn-lsp-hook-vscode/runtimes/win/lib/net10.0/System.Diagnostics.EventLog.Messages.dll"/>
     </Folder>
-    <Folder Name="/dist/roslyn-lsp-hook-vscode/skills/roslyn-start/">
-        <File Path="dist/roslyn-lsp-hook-vscode/skills/roslyn-start/SKILL.md"/>
-    </Folder>
     <Folder Name="/plugin/">
         <File Path="plugin/.mcp.json"/>
         <File Path="plugin/hooks.json"/>
         <File Path="plugin/plugin.json"/>
     </Folder>
     <Folder Name="/plugin/skills/"/>
-    <Folder Name="/plugin/skills/roslyn-start/">
-        <File Path="plugin/skills/roslyn-start/SKILL.md"/>
-    </Folder>
     <Folder Name="/Solution Items/">
         <File Path="README.md"/>
     </Folder>
@@ -178,7 +159,4 @@
     <Project Path="CSharpLintHook/CSharpLintHook.fsproj"/>
     <Project Path="PwshLintHook/PwshLintHook.fsproj"/>
     <Project Path="PwshLintHook.Tests/PwshLintHook.Tests.fsproj"/>
-    <Project Path="RoslynLspHook.Tests/RoslynLspHook.Tests.fsproj"/>
-    <Project Path="RoslynLspHook/RoslynLspHook.fsproj"/>
-    <Project Path="RoslynLsp/RoslynLsp.fsproj"/>
 </Solution>

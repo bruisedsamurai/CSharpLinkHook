@@ -44,12 +44,8 @@ let distRoot = "dist"
 let distPlugin = distRoot </> pluginName
 let distPluginVsCode = distRoot </> (pluginName + "-vscode")
 let publishRoot = "publish"
-let roslynPublish = publishRoot </> "RoslynLspHook"
-let daemonPublish = publishRoot </> "RoslynLsp"
 let csharpPublish = publishRoot </> "CSharpLintHook"
 let astGrepOutlinePublish = publishRoot </> "AstGrepOutline"
-let roslynProj = "RoslynLspHook" </> "RoslynLspHook.fsproj"
-let daemonProj = "RoslynLsp" </> "RoslynLsp.fsproj"
 let csharpProj = "CSharpLintHook" </> "CSharpLintHook.fsproj"
 let astGrepOutlineProj = "AstGrepOutline" </> "AstGrepOutline.fsproj"
 let pwshPublish = publishRoot </> "PwshLintHook"
@@ -244,42 +240,6 @@ let initTargets () =
                 Configuration = DotNet.BuildConfiguration.Release
                 MSBuildParams = { o.MSBuildParams with DisableInternalBinLog = true } }))
 
-    // RoslynLspHook -> Native AOT single binary (PublishAot is set in its fsproj).
-    Target.create "PublishRoslyn" (fun _ ->
-        Shell.cleanDir roslynPublish
-
-        roslynProj
-        |> publish (fun o ->
-            { o with
-                Runtime = Some rid
-                OutputPath = Some roslynPublish })
-
-        // The shippable artifact is the single native binary; drop debug symbols.
-        for d in Directory.GetDirectories(roslynPublish, "*.dSYM") do
-            Shell.rm_rf d
-
-        for f in Directory.GetFiles(roslynPublish, "*.pdb") do
-            File.Delete f)
-
-    // RoslynLsp (the broker daemon) -> Native AOT single binary (PublishAot is set
-    // in its fsproj). The hook spawns this binary on sessionStart / self-heal, so it
-    // ships flattened into the plugin root right beside the hook.
-    Target.create "PublishDaemon" (fun _ ->
-        Shell.cleanDir daemonPublish
-
-        daemonProj
-        |> publish (fun o ->
-            { o with
-                Runtime = Some rid
-                OutputPath = Some daemonPublish })
-
-        // The shippable artifact is the single native binary; drop debug symbols.
-        for d in Directory.GetDirectories(daemonPublish, "*.dSYM") do
-            Shell.rm_rf d
-
-        for f in Directory.GetFiles(daemonPublish, "*.pdb") do
-            File.Delete f)
-
     // CSharpLintHook -> framework-dependent (Roslyn + MEF are not AOT-safe).
     // Portable DLLs, no native apphost; invoked via `dotnet CSharpLintHook.dll`.
     Target.create "PublishCSharp" (fun _ ->
@@ -401,15 +361,11 @@ let initTargets () =
         Shell.cleanDir distPlugin
         copyCliPluginScaffold ()
 
-        Shell.copyDir distPlugin roslynPublish (fun _ -> true)
-        Shell.copyDir distPlugin daemonPublish (fun _ -> true)
         Shell.copyDir distPlugin csharpPublish (fun _ -> true)
         Shell.copyDir distPlugin astGrepOutlinePublish (fun _ -> true)
         Shell.copyDir (distPlugin </> pwshDistSubdir) pwshPublish (fun _ -> true)
         Shell.copyDir distPlugin fffMcpPublish (fun _ -> true)
 
-        setExecutable (distPlugin </> "RoslynLspHook")
-        setExecutable (distPlugin </> "RoslynLsp")
         setExecutable (distPlugin </> "AstGrepOutline")
         setExecutable (distPlugin </> fffMcpBinaryName)
 
@@ -421,15 +377,11 @@ let initTargets () =
         Shell.cleanDir distPluginVsCode
         copyVsCodePluginScaffold ()
 
-        Shell.copyDir distPluginVsCode roslynPublish (fun _ -> true)
-        Shell.copyDir distPluginVsCode daemonPublish (fun _ -> true)
         Shell.copyDir distPluginVsCode csharpPublish (fun _ -> true)
         Shell.copyDir distPluginVsCode astGrepOutlinePublish (fun _ -> true)
         Shell.copyDir (distPluginVsCode </> pwshDistSubdir) pwshPublish (fun _ -> true)
         Shell.copyDir distPluginVsCode fffMcpPublish (fun _ -> true)
 
-        setExecutable (distPluginVsCode </> "RoslynLspHook")
-        setExecutable (distPluginVsCode </> "RoslynLsp")
         setExecutable (distPluginVsCode </> "AstGrepOutline")
         setExecutable (distPluginVsCode </> fffMcpBinaryName)
 
@@ -438,8 +390,6 @@ let initTargets () =
     Target.create "Default" ignore
 
     // Build graph
-    "PublishRoslyn" ==> "Plugin" |> ignore
-    "PublishDaemon" ==> "Plugin" |> ignore
     "PublishCSharp" ==> "Plugin" |> ignore
     "PublishAstGrepOutline" ==> "Plugin" |> ignore
     "PublishPwshLintHook" ==> "Plugin" |> ignore
@@ -452,15 +402,11 @@ let initTargets () =
 
     // Ordering when several of these run in one invocation
     "Clean" ?=> "Test" |> ignore
-    "Clean" ?=> "PublishRoslyn" |> ignore
-    "Clean" ?=> "PublishDaemon" |> ignore
     "Clean" ?=> "PublishCSharp" |> ignore
     "Clean" ?=> "PublishAstGrepOutline" |> ignore
     "Clean" ?=> "PublishPwshLintHook" |> ignore
     "Clean" ?=> "FetchFffMcp" |> ignore
     "Clean" ?=> "FetchAstGrepSkill" |> ignore
-    "Test" ?=> "PublishRoslyn" |> ignore
-    "Test" ?=> "PublishDaemon" |> ignore
     "Test" ?=> "PublishCSharp" |> ignore
     "Test" ?=> "PublishAstGrepOutline" |> ignore
     "Test" ?=> "PublishPwshLintHook" |> ignore

@@ -4,8 +4,6 @@ A **GitHub Copilot CLI plugin** that wires C# and structural-code hooks into you
 
 - **CSharpLintHook** — diff-aware Roslyn formatting that tidies only the regions
   of a file the agent just edited. See [`CSharpLintHook/README.md`](CSharpLintHook/README.md).
-- **RoslynLspHook** — surfaces C# compiler diagnostics for edited files by
-  appending them to the tool result (`modifiedResult`). See [`RoslynLspHook/README.md`](RoslynLspHook/README.md).
 - **ast-grep outline hook** — appends `ast-grep outline <path>` context when the
   agent reads or searches a file or folder.
 - **PwshLintHook** — a `preToolUse` guard that parses the `powershell` tool's command
@@ -16,8 +14,8 @@ A **GitHub Copilot CLI plugin** that wires C# and structural-code hooks into you
   finder, built from source and wired in as an MCP server (`mcpServers.fff`) — the tool
   PwshLintHook redirects content searches to.
 
-The build packages these tools, the hook wiring, and the `roslyn-start` /
-`ast-grep` skills into a single installable plugin folder.
+The build packages these tools, the hook wiring, and the `ast-grep` skill
+into a single installable plugin folder.
 
 ## Prerequisites
 
@@ -52,9 +50,9 @@ The `Plugin` target publishes both binaries and assembles them with the manifest
 hooks, and skill. The `Default` target (no argument) additionally cleans and runs
 the test suite first.
 
-`RoslynLspHook` is published as a Native AOT single binary, so the plugin is
-**platform-specific**. The runtime defaults to the host; override it to package for
-another platform:
+`AstGrepOutline` is published as a Native AOT single binary and the bundled
+`fff-mcp` server is a native binary, so the plugin is **platform-specific**. The
+runtime defaults to the host; override it to package for another platform:
 
 ```bash
 RID=linux-x64 ./build.sh Plugin     # also e.g. osx-arm64, win-x64
@@ -67,11 +65,9 @@ The build writes the assembled plugin to:
 ```
 dist/roslyn-lsp-hook/
 ├── plugin.json                 # manifest (+ mcpServers.fff)
-├── hooks.json                  # sessionStart + pre/postToolUse wiring
+├── hooks.json                  # pre/postToolUse wiring
 ├── skills/
-│   ├── roslyn-start/SKILL.md   # starts the Roslyn language server
 │   └── ast-grep/               # fetched from ast-grep/agent-skill
-├── RoslynLspHook               # native AOT client binary
 ├── AstGrepOutline              # native AOT postToolUse outline hook
 ├── fff-mcp                     # FFF MCP server binary (fetched via fff's installer)
 ├── PwshLintHook/               # preToolUse PowerShell guard (isolated subfolder)
@@ -94,10 +90,8 @@ dist/roslyn-lsp-hook-vscode/
 ├── hooks/
 │   └── hooks.json              # PascalCase events, single `command`, ${CLAUDE_PLUGIN_ROOT}
 ├── skills/
-│   ├── roslyn-start/SKILL.md
 │   └── ast-grep/
-├── RoslynLspHook               # same binaries as the CLI folder
-├── AstGrepOutline
+├── AstGrepOutline              # same binaries as the CLI folder
 └── CSharpLintHook.dll, *.dll
 ```
 
@@ -129,7 +123,7 @@ folder instead, register it directly:
 
 3. Reload the window (**Developer: Reload Window**). The plugin appears in the
    Extensions view under **Agent Plugins - Installed** (search `@agentPlugins`),
-   and its `roslyn-start` skill shows in **Chat: Configure Skills**.
+   and its `ast-grep` skill shows in **Chat: Configure Skills**.
 
 Because the setting points at the folder, a later `build.cmd Plugin` updates the
 plugin in place — just reload the window to pick up new binaries (no reinstall).
@@ -176,21 +170,12 @@ copilot plugin uninstall roslyn-lsp-hook
 
 ## What the plugin does once installed
 
-- **`sessionStart`** runs `RoslynLspHook sessionStart`, which spawns a **detached
-  background worker** (`RoslynLspHook setup`) and returns immediately, so it never
-  blocks the session. The worker installs the `roslyn-language-server` tool if it
-  is missing, starts the server for the workspace (idempotent — it never launches a
-  second one), and — when the workspace has exactly one `*.sln` — scopes the server
-  to it. Progress is written to `%TEMP%/roslyn-lsp-<pipe>-setup.log`
-  (`/tmp` on Unix). For a workspace with **several** solutions, run the
-  `roslyn-start` skill to pick one.
-- **`postToolUse`** wires three entries. `CSharpLintHook hook format` (matched to
+- **`postToolUse`** wires two entries. `CSharpLintHook hook format` (matched to
   `edit|create`) reformats the changed regions of the edited C# file in place.
   The ast-grep outline hook (matched to `grep|view`) installs/updates
   `@ast-grep/cli` via `npm i -g`, then runs `ast-grep outline <path>` for file targets
   and folder targets, then appends the
-  outline as `additionalContext`. `RoslynLspHook` then reports any compiler diagnostics for edited C# back to
-  the agent by appending them to the tool result (`modifiedResult`). The matcher keeps each
+  outline as `additionalContext`. The matcher keeps each
   flow scoped to the right tools, so reading a `.cs` file never reformats it.
 - **`preToolUse`** wires two entries. `CSharpLintHook hook commit-guard` (matched to
   `bash|powershell`) inspects the command about to run and **denies** it when the
@@ -205,19 +190,8 @@ copilot plugin uninstall roslyn-lsp-hook
   resolved from `${PLUGIN_ROOT}/fff-mcp`), so the fast file/content finder PwshLintHook
   redirects to is available in-session.
 
-> **Copilot CLI 1.0.64 note.** A `sessionStart` hook's stdout is discarded by the
-> CLI, so the server is started as a process side effect (the detached worker)
-> rather than by emitting context or auto-running a skill. The same release also
-> ignores `additionalContext` returned from `postToolUse`, so `RoslynLspHook`
-> instead returns a `modifiedResult` that echoes the original tool result with the
-> diagnostics appended to `textResultForLlm`. (`CSharpLintHook`'s format flow still
-> emits `additionalContext`; its reformatting is a file side effect that works
-> regardless, so only its informational note is dropped. The ast-grep outline hook also returns
-> `additionalContext`, so it is subject to the same CLI behavior.)
-
-The language server itself is the `roslyn-language-server` .NET global tool; the
-`roslyn-start` skill installs it on demand with:
-
-```bash
-dotnet tool install --global roslyn-language-server --prerelease
-```
+> **Copilot CLI 1.0.64 note.** The CLI ignores `additionalContext` returned from
+> `postToolUse`. `CSharpLintHook`'s format flow still emits `additionalContext`;
+> its reformatting is a file side effect that works regardless, so only its
+> informational note is dropped. The ast-grep outline hook also returns
+> `additionalContext`, so it is subject to the same CLI behavior.

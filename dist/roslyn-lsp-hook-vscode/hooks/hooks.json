@@ -1,13 +1,5 @@
 {
   "hooks": {
-    "SessionStart": [
-      {
-        "type": "command",
-        "cwd": ".",
-        "timeoutSec": 30,
-        "command": "if (Test-Path \"${CLAUDE_PLUGIN_ROOT}\\RoslynLspHook.exe\") { & \"${CLAUDE_PLUGIN_ROOT}\\RoslynLspHook.exe\" }; exit 0"
-      }
-    ],
     "PreToolUse": [
       {
         "type": "command",
@@ -38,12 +30,6 @@
         "cwd": ".",
         "timeoutSec": 30,
         "command": "if (Test-Path \"${CLAUDE_PLUGIN_ROOT}\\AstGrepOutline.exe\") { & \"${CLAUDE_PLUGIN_ROOT}\\AstGrepOutline.exe\" }; exit 0"
-      },
-      {
-        "type": "command",
-        "cwd": ".",
-        "timeoutSec": 30,
-        "command": "if (Test-Path \"${CLAUDE_PLUGIN_ROOT}\\RoslynLspHook.exe\") { & \"${CLAUDE_PLUGIN_ROOT}\\RoslynLspHook.exe\" }; exit 0"
       }
     ]
   }

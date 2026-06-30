@@ -1,15 +1,6 @@
 {
   "version": 1,
   "hooks": {
-    "sessionStart": [
-      {
-        "type": "command",
-        "cwd": ".",
-        "bash": "test -x \"${PLUGIN_ROOT}/RoslynLspHook\" && \"${PLUGIN_ROOT}/RoslynLspHook\" || true",
-        "powershell": "if (Test-Path \"${PLUGIN_ROOT}\\RoslynLspHook.exe\") { & \"${PLUGIN_ROOT}\\RoslynLspHook.exe\" }; exit 0",
-        "timeoutSec": 30
-      }
-    ],
     "preToolUse": [
       {
         "type": "command",
@@ -43,13 +34,6 @@
         "cwd": ".",
         "bash": "test -x \"${PLUGIN_ROOT}/AstGrepOutline\" && \"${PLUGIN_ROOT}/AstGrepOutline\" || true",
         "powershell": "if (Test-Path \"${PLUGIN_ROOT}\\AstGrepOutline.exe\") { & \"${PLUGIN_ROOT}\\AstGrepOutline.exe\" }; exit 0",
-        "timeoutSec": 30
-      },
-      {
-        "type": "command",
-        "cwd": ".",
-        "bash": "test -x \"${PLUGIN_ROOT}/RoslynLspHook\" && \"${PLUGIN_ROOT}/RoslynLspHook\" || true",
-        "powershell": "if (Test-Path \"${PLUGIN_ROOT}\\RoslynLspHook.exe\") { & \"${PLUGIN_ROOT}\\RoslynLspHook.exe\" }; exit 0",
         "timeoutSec": 30
       }
     ]

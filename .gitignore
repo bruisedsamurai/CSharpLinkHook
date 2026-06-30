@@ -8,3 +8,6 @@ publish/
 # AI tools
 .idea
 goal
+
+# Rider settings
+CSharpLintHook.sln.DotSettings.user

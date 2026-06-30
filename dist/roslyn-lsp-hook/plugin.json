@@ -8,6 +8,5 @@
   "license": "MIT",
   "keywords": ["csharp", "dotnet", "roslyn", "lsp", "formatting", "lint", "hooks", "ast-grep"],
   "skills": ["skills/"],
-  "hooks": "hooks.json",
-  "mcpServers": ".mcp.json"
+  "hooks": "hooks.json"
 }

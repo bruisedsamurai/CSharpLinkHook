@@ -21,14 +21,6 @@
       },
       {
         "type": "command",
-        "matcher": "bash|grep|view|powershell",
-        "cwd": ".",
-        "bash": "test -f \"${PLUGIN_ROOT}/CSharpLintHook.dll\" && dotnet \"${PLUGIN_ROOT}/CSharpLintHook.dll\" hook read || true",
-        "powershell": "if (Test-Path \"${PLUGIN_ROOT}\\CSharpLintHook.dll\") { dotnet \"${PLUGIN_ROOT}\\CSharpLintHook.dll\" hook read }; exit 0",
-        "timeoutSec": 30
-      },
-      {
-        "type": "command",
         "matcher": "grep|view",
         "cwd": ".",
         "bash": "test -x \"${PLUGIN_ROOT}/AstGrepOutline\" && \"${PLUGIN_ROOT}/AstGrepOutline\" || true",

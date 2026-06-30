@@ -18,13 +18,6 @@
       },
       {
         "type": "command",
-        "matcher": "bash|grep|view|powershell",
-        "cwd": ".",
-        "timeoutSec": 30,
-        "command": "if (Test-Path \"${CLAUDE_PLUGIN_ROOT}\\CSharpLintHook.dll\") { dotnet \"${CLAUDE_PLUGIN_ROOT}\\CSharpLintHook.dll\" hook read }; exit 0"
-      },
-      {
-        "type": "command",
         "matcher": "grep|view",
         "cwd": ".",
         "timeoutSec": 30,

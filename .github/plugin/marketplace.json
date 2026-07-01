@@ -11,7 +11,7 @@
     {
       "name": "roslyn-lsp-hook",
       "description": "C# hooks for GitHub Copilot CLI: diff-aware Roslyn formatting and ast-grep outline context.",
-      "version": "0.1.0",
+      "version": "0.2.0",
       "source": "dist/roslyn-lsp-hook"
     }
   ]
